@@ -153,6 +153,28 @@ Cela permet:
 
 Le terminal doit rester correct pour les shells et TUIs classiques. L'intelligence agentique doit etre une couche au-dessus du modele terminal, pas un hack dans le parsing VT.
 
+Cette couche doit transformer une session terminal en timeline exploitable, pas seulement en mur de texte scrollable. Le coeur terminal continue de produire l'etat visuel correct. La couche semantique observe ensuite les bytes, l'input utilisateur, les events PTY, les offsets, les timestamps et les patterns connus pour indexer ce qui s'est passe.
+
+Exemple de sortie conceptuelle:
+
+```text
+session
+  command: "cargo test -p paneflow-config"
+    cwd: "C:\\dev\\paneflow"
+    exit_code: 0
+    output_lines: 842
+  command: "git diff"
+    output_type: diff
+    files: ["schema.rs", "pty_session.rs"]
+  agent_block: "Codex tool call"
+    kind: shell_command
+    command: "cargo check -p paneflow-app"
+  error_block:
+    source: "rustc"
+    severity: warning
+    file: "src-app/src/settings/tabs/terminal.rs"
+```
+
 Couches semantiques possibles:
 
 - detection de frontieres de commandes
@@ -162,6 +184,8 @@ Couches semantiques possibles:
 - groupement tool calls et logs
 - reconnaissance de markdown ou code blocks dans les sorties CLI
 - export structure pour les sessions Paneflow
+
+Cette couche doit etre optionnelle et non bloquante. Si elle se trompe, le rendu terminal ne doit pas casser. On perd une metadata, un marker ou un index, pas la correction du terminal.
 
 ## Premiers Milestones
 
