@@ -3,13 +3,13 @@
 Status: initial focused pass
 Date: 2026-07-01
 Reference source: `C:\dev\ghostty`
-Scope: Ghostty architecture lessons for Kepler, not a full Ghostty clone audit.
+Scope: Ghostty architecture lessons for Hera, not a full Ghostty clone audit.
 
 ## Executive Takeaways
 
-Ghostty is the strongest reference for Kepler's engine boundary: a terminal core
+Ghostty is the strongest reference for Hera's engine boundary: a terminal core
 owns VT state, exposes a renderer-neutral render state, and can be embedded
-through a narrow API. The pieces Kepler should copy are the architecture shape,
+through a narrow API. The pieces Hera should copy are the architecture shape,
 not the language stack.
 
 The high-value lessons:
@@ -23,8 +23,8 @@ The high-value lessons:
    viewport pins matter once sessions become long.
 5. Keep semantic prompt/session metadata as state attached to rows and cells,
    but never make it authoritative for terminal correctness.
-6. Keep Kepler Rust-first. Ghostty's Zig/C/Swift/GTK architecture is a reference
-   point, not a reason to make Kepler multi-language.
+6. Keep Hera Rust-first. Ghostty's Zig/C/Swift/GTK architecture is a reference
+   point, not a reason to make Hera multi-language.
 
 Confidence: high for core/render/scrollback findings, because they are grounded
 in Ghostty source and public headers. Medium for app-layer conclusions, because
@@ -33,7 +33,7 @@ this pass sampled the macOS and GTK sides rather than auditing every app file.
 ## Why Ghostty Matters
 
 Ghostty describes itself as a fast, native, feature-rich terminal emulator in
-the README (`C:\dev\ghostty\README.md:8`). The important part for Kepler is not
+the README (`C:\dev\ghostty\README.md:8`). The important part for Hera is not
 only the app: Ghostty exposes `libghostty` for native GUI frontends or embedding
 (`C:\dev\ghostty\README.md:10`) and documents `libghostty-vt` as a virtual
 terminal library for parsing sequences, maintaining terminal state, scrollback,
@@ -42,26 +42,26 @@ line wrapping and reflow (`C:\dev\ghostty\include\ghostty\vt.h:17`).
 Ghostty's README also makes a useful architectural split explicit: shared Zig
 core plus platform-native app frontends. The macOS app uses SwiftUI, Metal and
 CoreText, while the Linux app uses GTK and system integrations
-(`C:\dev\ghostty\README.md:130`). For Kepler, that validates a split between
-engine and host adapter. It does not validate writing Kepler's engine in Zig or
+(`C:\dev\ghostty\README.md:130`). For Hera, that validates a split between
+engine and host adapter. It does not validate writing Hera's engine in Zig or
 building separate app stacks inside the core.
 
 ## Codebase Map
 
-| Area | Local path | What it contains | Kepler relevance |
+| Area | Local path | What it contains | Hera relevance |
 |---|---|---|---|
 | Public VT C API | `C:\dev\ghostty\include\ghostty\vt*.h` | C entrypoints, terminal config, render-state API, tracked refs. | Public API shape for future C ABI and host embedding. |
 | Terminal core | `C:\dev\ghostty\src\terminal` | Terminal, screens, page list, parser stream, render state. | Main reference for `terminal-core` and `terminal-render-model`. |
 | C API implementation | `C:\dev\ghostty\src\terminal\c` | Zig implementation behind the C headers. | Boundary pattern, not code to port. |
 | Termio runtime | `C:\dev\ghostty\src\termio*` | PTY IO, mailbox, read/write threading, renderer wakeups. | Reference for future `terminal-pty` and runtime queues. |
-| PTY layer | `C:\dev\ghostty\src\pty.zig`, `C:\dev\ghostty\src\pty.c` | POSIX PTY, Windows PseudoConsole and pipe handling. | Cross-platform PTY evidence, but Kepler should use Rust. |
+| PTY layer | `C:\dev\ghostty\src\pty.zig`, `C:\dev\ghostty\src\pty.c` | POSIX PTY, Windows PseudoConsole and pipe handling. | Cross-platform PTY evidence, but Hera should use Rust. |
 | Renderer | `C:\dev\ghostty\src\renderer*` | Generic renderer, OpenGL/Metal implementations, render thread. | Host/render adapter lessons, not core dependency. |
-| Native app runtime | `C:\dev\ghostty\src\apprt`, `C:\dev\ghostty\macos` | GTK, SwiftUI/AppKit, app callbacks, surface lifecycle. | Confirms native host layer should stay outside Kepler core. |
-| Examples | `C:\dev\ghostty\example` | C, Zig, Swift and WASM embedding examples. | Model for Kepler executable docs and fixture harnesses. |
+| Native app runtime | `C:\dev\ghostty\src\apprt`, `C:\dev\ghostty\macos` | GTK, SwiftUI/AppKit, app callbacks, surface lifecycle. | Confirms native host layer should stay outside Hera core. |
+| Examples | `C:\dev\ghostty\example` | C, Zig, Swift and WASM embedding examples. | Model for Hera executable docs and fixture harnesses. |
 
 ## Product And Public API Positioning
 
-Ghostty has two layers that Kepler should keep mentally separate:
+Ghostty has two layers that Hera should keep mentally separate:
 
 - The terminal app: native, platform-integrated, optimized for real terminal
   usage.
@@ -73,10 +73,10 @@ input encoding, scrollback, line wrapping and reflow
 (`C:\dev\ghostty\include\ghostty\vt.h:17`). It also exposes render-state and
 formatter API groups (`C:\dev\ghostty\include\ghostty\vt.h:32`). The API is
 marked incomplete and work-in-progress (`C:\dev\ghostty\include\ghostty\vt.h:10`),
-which is a useful warning for Kepler: do not publish a broad stable API before
+which is a useful warning for Hera: do not publish a broad stable API before
 the state model, row identity and snapshot model are proven.
 
-Kepler implication: the first public API should be narrow:
+Hera implication: the first public API should be narrow:
 
 - `Terminal::new`
 - `Terminal::resize`
@@ -112,7 +112,7 @@ selection, Kitty keyboard/images and semantic prompt state
 `C:\dev\ghostty\src\terminal\Screen.zig:53`,
 `C:\dev\ghostty\src\terminal\Screen.zig:69`).
 
-Kepler implication:
+Hera implication:
 
 - `terminal-core` should own `Terminal`, `ScreenSet`, `Screen`, cursor, modes,
   tabs, charsets and scrollback.
@@ -142,14 +142,14 @@ terminal state and can call effect callbacks such as writing back to the PTY
 warns that callbacks run during `ghostty_terminal_vt_write`, must not reenter
 `vt_write`, and must not block (`C:\dev\ghostty\include\ghostty\vt\terminal.h:45`).
 
-Kepler implication:
+Hera implication:
 
-- `alacritty/vte` can be used as parser seed, but Kepler must own the action
+- `alacritty/vte` can be used as parser seed, but Hera must own the action
   layer and terminal semantics.
-- The parser boundary should be internal. Public APIs should talk in Kepler
+- The parser boundary should be internal. Public APIs should talk in Hera
   events, snapshots and render state, not `vte::Perform`.
 - Callback-based host effects are dangerous for reentrancy and latency. Prefer
-  explicit effect queues for Kepler.
+  explicit effect queues for Hera.
 
 ## Scrollback And Page Storage
 
@@ -177,7 +177,7 @@ paths (`C:\dev\ghostty\src\terminal\PageList.zig:13638`,
 `C:\dev\ghostty\src\terminal\PageList.zig:13812`,
 `C:\dev\ghostty\src\terminal\PageList.zig:14009`).
 
-Kepler implication:
+Hera implication:
 
 - M1 may start simpler, but the public model should already assume stable row
   handles and generations.
@@ -188,7 +188,7 @@ Kepler implication:
 
 ## Render State Boundary
 
-Ghostty's render state is almost exactly the boundary Kepler needs. The public
+Ghostty's render state is almost exactly the boundary Hera needs. The public
 header says a render state is required to render the visible viewport, receives
 updates from one terminal and exposes only dirty regions
 (`C:\dev\ghostty\include\ghostty\vt\render.h:24`). Basic usage is create render
@@ -222,7 +222,7 @@ state (`C:\dev\ghostty\example\c-vt-render\src\main.c:24`,
 `C:\dev\ghostty\example\c-vt-render\src\main.c:157`,
 `C:\dev\ghostty\example\c-vt-render\src\main.c:257`).
 
-Kepler implication:
+Hera implication:
 
 - `terminal-render-model` should be a first-class crate.
 - Render output should be pull-based: update state, inspect dirty region, then
@@ -268,7 +268,7 @@ read data into `Termio.processOutput`
 (`C:\dev\ghostty\src\termio\Exec.zig:1338`,
 `C:\dev\ghostty\src\termio\Exec.zig:1390`).
 
-Kepler implication:
+Hera implication:
 
 - `terminal-core` should stay headless and synchronous enough for tests.
 - `terminal-pty` should be separate, trait-based and runtime-owned.
@@ -288,7 +288,7 @@ PseudoConsole, then calls `CreatePseudoConsole`
 (`C:\dev\ghostty\src\pty.zig:325`, `C:\dev\ghostty\src\pty.zig:370`,
 `C:\dev\ghostty\src\pty.zig:430`).
 
-Kepler implication:
+Hera implication:
 
 - Cross-platform PTY does not require C#, Objective-C, Swift, Zig or C++.
 - Rust can model the same split with `cfg(target_os = "windows")` and Unix
@@ -324,7 +324,7 @@ and constructs the core app with `ghostty_app_new`
 embeds surfaces and GTK widgets, including a scrolled-window wrapper around a
 surface (`C:\dev\ghostty\src\apprt\gtk\class\surface_scrolled_window.zig:14`).
 
-Kepler implication:
+Hera implication:
 
 - Native app/runtime code should be host adapters, not terminal engine code.
 - A future GPUI adapter should consume `terminal-render-model` and own all GPUI
@@ -344,7 +344,7 @@ prompt cursor behavior (`C:\dev\ghostty\src\terminal\Terminal.zig:12097`,
 `C:\dev\ghostty\src\terminal\Terminal.zig:12557`) and selection line behavior
 at semantic prompt boundaries (`C:\dev\ghostty\src\terminal\Screen.zig:8002`).
 
-Kepler implication:
+Hera implication:
 
 - Semantic metadata is worth modeling early because Paneflow/agent workflows
   need command blocks, prompts and outputs.
@@ -360,7 +360,7 @@ README says `c-*` directories use the C API and `zig-*` directories use the Zig
 API (`C:\dev\ghostty\example\README.md:4`). Even C examples use Zig's build
 system, but not Zig as their language (`C:\dev\ghostty\example\README.md:9`).
 
-The examples are especially useful for Kepler because they describe how an
+The examples are especially useful for Hera because they describe how an
 external host should drive the engine:
 
 - `c-vt-stream` creates a terminal, writes VT sequences with
@@ -373,7 +373,7 @@ external host should drive the engine:
 - `swift-vt-xcframework` demonstrates consuming `libghostty-vt` from a Swift
   package (`C:\dev\ghostty\example\swift-vt-xcframework\README.md:3`).
 
-Kepler implication:
+Hera implication:
 
 - Build examples should be kept close to each public API.
 - A debug CLI should act like the C examples: create terminal, write bytes,
@@ -383,7 +383,7 @@ Kepler implication:
 ## Tests, Fuzzing And Compatibility Clues
 
 Ghostty's tests are embedded across terminal files. The most useful categories
-for Kepler:
+for Hera:
 
 - Terminal full reset and alternate screen behavior
   (`C:\dev\ghostty\src\terminal\Terminal.zig:12649`,
@@ -398,22 +398,22 @@ for Kepler:
 - Fuzzer-discovered terminal crash regression
   (`C:\dev\ghostty\src\terminal\Terminal.zig:13200`).
 
-Kepler implication:
+Hera implication:
 
 - Do not wait for UI to test terminal correctness.
 - Build fixture families for page storage, resize, alternate screen and render
   dirty state before adding complex PTY/runtime features.
 - Fuzz byte ingestion early once parser/action handling exists.
 
-## Language Decision For Kepler
+## Language Decision For Hera
 
 Ghostty proves that a serious terminal can be cross-platform with a shared core
-and native host layers. It does not prove that Kepler should use Ghostty's
+and native host layers. It does not prove that Hera should use Ghostty's
 languages.
 
-For Kepler:
+For Hera:
 
-| Zone | Ghostty reference | Kepler language decision |
+| Zone | Ghostty reference | Hera language decision |
 |---|---|---|
 | Terminal state core | Zig `src/terminal` | Rust only. |
 | Public embedding API | C headers over Zig core | Rust public API first, optional C ABI later. |
@@ -428,9 +428,9 @@ For Kepler:
 Decision: Ghostty strengthens the Rust-first plan. The right extraction is
 conceptual: engine boundary, page storage, render-state API and runtime
 separation. The wrong extraction would be importing Zig/Swift/GTK language debt
-into Kepler.
+into Hera.
 
-## What Kepler Should Copy
+## What Hera Should Copy
 
 Copy the architectural ideas:
 
@@ -444,7 +444,7 @@ Copy the architectural ideas:
 - Examples that act as executable docs.
 - Semantic prompt metadata as optional state, not correctness logic.
 
-## What Kepler Should Avoid
+## What Hera Should Avoid
 
 Avoid these traps:
 
@@ -456,7 +456,7 @@ Avoid these traps:
 - Do not store scrollback as an unbounded line vector.
 - Do not treat semantic prompt detection as authoritative.
 
-## Follow-Up Fixtures For Kepler
+## Follow-Up Fixtures For Hera
 
 Ghostty-inspired fixture backlog:
 
@@ -483,6 +483,6 @@ Open points not fully audited in this first Ghostty file:
 - Full macOS CoreText/Metal text shaping pipeline.
 - Benchmark methodology for parser, render state and GPU frame update.
 
-These are not blockers for Kepler M1. The M1 extraction is already clear:
+These are not blockers for Hera M1. The M1 extraction is already clear:
 headless Rust core, stable render model, page-aware storage design, PTY outside
 core, semantic sidecar.

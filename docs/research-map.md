@@ -2,24 +2,24 @@
 
 Status: M0 initial map
 Date: 2026-07-01
-Scope: architecture research for `kepler-terminal`, not implementation.
+Scope: architecture research for `Hera`, not implementation.
 
 ## Executive Synthesis
 
-Kepler should start as a headless terminal engine, not as a terminal app. The
+Hera should start as a headless terminal engine, not as a terminal app. The
 strongest references converge on one shape: a core object owns parser plus
 terminal state, consumes bytes, emits a renderer-neutral snapshot, and exposes
 scrollback, viewport, damage, snapshot and replay APIs without knowing the host
 renderer or PTY runtime.
 
-The key decision: Kepler must own terminal semantics. A parser such as
+The key decision: Hera must own terminal semantics. A parser such as
 `alacritty/vte` can tokenize VT input, but it intentionally does not assign
 meaning to escape sequences. The state machine, grids, scrollback, modes,
-alternate screen, reflow, semantic timeline and snapshots belong in Kepler.
+alternate screen, reflow, semantic timeline and snapshots belong in Hera.
 
 Recommended M1 bias:
 
-1. Wrap `alacritty/vte` first, behind a Kepler parser boundary.
+1. Wrap `alacritty/vte` first, behind a Hera parser boundary.
 2. Model `Terminal { state, parser }`, closer to WezTerm than to app-first
    terminals.
 3. Start with an Alacritty/Rio-style grid for simplicity, but design stable row
@@ -39,7 +39,7 @@ Recommended M1 bias:
 Most initial reference repos were cloned under `C:\dev\terminal-research`.
 Dedicated inventory passes use the source path listed in each reference file.
 
-| Reference | What Kepler should learn | Caveat |
+| Reference | What Hera should learn | Caveat |
 |---|---|---|
 | `alacritty-vte` | Parser boundary, Paul Williams state machine, `Perform` dispatch. | Parser only, no terminal semantics. Detail: [Alacritty VTE inventory](reference-inventory/alacritty-vte.md). |
 | `alacritty` | Mature Rust grid, primary/alternate screen, damage/render handoff, fixture tests. | App-oriented, OpenGL/front-end assumptions live nearby. Detail: [Alacritty inventory](reference-inventory/alacritty.md). |
@@ -47,10 +47,10 @@ Dedicated inventory passes use the source path listed in each reference file.
 | `rio` | Rust renderer modernity, Alacritty-derived grid/reflow, damage snapshots, Sugarloaf backends. | More useful for renderer lessons than core terminal originality. Detail: [Rio inventory](reference-inventory/rio.md). |
 | `ghostty` | Embeddable terminal API, render snapshots, page-based scrollback, dirty row/cell iteration. | Zig/C API, not directly reusable in Rust M1. Detail: [Ghostty inventory](reference-inventory/ghostty.md). |
 | `ghostling` | Minimal host loop around libghostty, render-state iterators, host effects, Raylib drawing. | Great embedding sample, not a Rust engine or cross-platform PTY model. Detail: [Ghostling inventory](reference-inventory/ghostling.md). |
-| `kitty` | Advanced protocol scope, especially graphics, keyboard, shell integration and extension tests. | Not a Kepler stack model: C/Python/Go/Objective-C, POSIX PTY bias, graphics protocol too broad for M1 rendering. Detail: [Kitty inventory](reference-inventory/kitty.md). |
-| `contour` | C++23 terminal layers, ConPTY plus Unix PTY, reflow mode, Sixel/GIP, OSC 133, semantic block query, buffer capture and CSI u. | C++/Qt surface is too broad for Kepler core; use as protocol and fixture oracle. Detail: [Contour inventory](reference-inventory/contour.md). |
-| `microsoft-terminal` | ConPTY, Windows terminal buffer, renderer boundary, marks and reflow pain. | Windows product constraints, avoid coupling core to ConPTY internals. |
-| `gnome-vte` | Historic parser/ring/screen behavior, mature compatibility. | Public object is a GTK widget, poor headless reference. |
+| `kitty` | Advanced protocol scope, especially graphics, keyboard, shell integration and extension tests. | Not a Hera stack model: C/Python/Go/Objective-C, POSIX PTY bias, graphics protocol too broad for M1 rendering. Detail: [Kitty inventory](reference-inventory/kitty.md). |
+| `contour` | C++23 terminal layers, ConPTY plus Unix PTY, reflow mode, Sixel/GIP, OSC 133, semantic block query, buffer capture and CSI u. | C++/Qt surface is too broad for Hera core; use as protocol and fixture oracle. Detail: [Contour inventory](reference-inventory/contour.md). |
+| `windows-terminal` | ConPTY internals, TextBuffer/ROW, TerminalCore/ControlCore split, renderer invalidation, marks and reflow pain. | Windows-only C++/WinRT product constraints. Use as Windows behavior oracle, not as Hera's core stack. Detail: [Windows Terminal inventory](reference-inventory/windows-terminal.md). |
+| `gnome-vte` | Mature GTK VTE widget, parser, ring, rewrap docs, Unix PTY, RingView, OSC 8/133 and Sixel metadata. | GTK/GObject and Unix bias. Use as behavior oracle, not as Hera's core stack. Detail: [GNOME VTE inventory](reference-inventory/gnome-vte.md). |
 | `xterm.js` | Ergonomic headless public API, parser hooks, buffers, addons, VS Code-style embedding. | JS/web model, parser hook async caveats do not map cleanly to Rust. |
 | `vt100-rust` | Small byte-stream to memory model, JSON screen fixtures, contents diff tests. | Simpler compatibility target. |
 | `vt-push-parser` | Streaming push parser, event allocation discipline, input parser ideas. | Newer and narrower than `alacritty/vte`. |
@@ -78,6 +78,11 @@ Detailed per-reference files:
   `C:\dev\kitty`.
 - [Contour](reference-inventory/contour.md), focused pass against
   `C:\dev\contour`.
+- [Windows Terminal](reference-inventory/windows-terminal.md), focused pass
+  against `C:\dev\terminal`.
+- [GNOME VTE](reference-inventory/gnome-vte.md), focused pass against
+  `C:\dev\terminal-research\gnome-vte`. Note: `C:\dev\vte` is
+  `alacritty/vte` in this workspace.
 
 ## Architecture Findings
 
@@ -95,7 +100,7 @@ Local refs:
 - `C:\dev\vte\src\lib.rs:50`
 - `C:\dev\vte\src\lib.rs:753`
 
-Kepler implication: define `terminal-protocol` events or an internal
+Hera implication: define `terminal-protocol` events or an internal
 `TerminalAction` layer immediately. Do not let `vte::Perform` leak through the
 public API.
 
@@ -133,6 +138,19 @@ Local refs:
 - `C:\dev\contour\src\vtparser\ParserEvents.h:140`
 - `C:\dev\contour\src\vtparser\Parser.h:669`
 
+GNOME VTE is a secondary parser oracle: it has its own CSI/DCS/OSC parser and
+generated sequence tables, including unripe DECSIXEL handling. It should inform
+coverage and edge cases, not replace the Rust `alacritty/vte` seed.
+
+Local refs:
+
+- [GNOME VTE inventory](reference-inventory/gnome-vte.md)
+- `C:\dev\terminal-research\gnome-vte\src\parser.hh:216`
+- `C:\dev\terminal-research\gnome-vte\src\parser.hh:394`
+- `C:\dev\terminal-research\gnome-vte\src\parser.hh:932`
+- `C:\dev\terminal-research\gnome-vte\src\parser.cc:323`
+- `C:\dev\terminal-research\gnome-vte\src\parser-seq.py:981`
+
 ### Terminal State And Screens
 
 The core must explicitly model primary and alternate screens. Alacritty's
@@ -148,8 +166,18 @@ Local refs:
 - `C:\dev\terminal-research\xterm.js\typings\xterm.d.ts:957`
 - `C:\dev\terminal-research\xterm.js\src\common\buffer\BufferSet.ts:13`
 - `C:\dev\terminal-research\libvterm\include\vterm.h:562`
+- [Windows Terminal inventory](reference-inventory/windows-terminal.md)
+- `C:\dev\terminal\src\cascadia\TerminalCore\Terminal.hpp:157`
+- `C:\dev\terminal\src\cascadia\TerminalCore\TerminalApi.cpp:242`
+- `C:\dev\terminal\src\cascadia\TerminalCore\TerminalApi.cpp:293`
+- [GNOME VTE inventory](reference-inventory/gnome-vte.md)
+- `C:\dev\terminal-research\gnome-vte\src\vteinternal.hh:468`
+- `C:\dev\terminal-research\gnome-vte\src\vteinternal.hh:469`
+- `C:\dev\terminal-research\gnome-vte\src\vteinternal.hh:470`
+- `C:\dev\terminal-research\gnome-vte\src\vte.cc:8412`
+- `C:\dev\terminal-research\gnome-vte\src\vte.cc:8413`
 
-Kepler implication: alternate screen is not an attribute on the viewport. It is
+Hera implication: alternate screen is not an attribute on the viewport. It is
 a distinct screen state with different scrollback semantics, cursor behavior and
 resize rules.
 
@@ -166,6 +194,20 @@ Local refs:
 - [Rio inventory](reference-inventory/rio.md)
 - `C:\dev\rio\rio-backend\src\crosswords\grid\mod.rs:35`
 
+GNOME VTE is the strongest row-ring reference in this set. Its `Ring` stores
+row records, text/attr streams, hyperlinks and image maps, and exposes rewrap
+as a first-class ring operation.
+
+Local refs:
+
+- [GNOME VTE inventory](reference-inventory/gnome-vte.md)
+- `C:\dev\terminal-research\gnome-vte\src\ring.hh:52`
+- `C:\dev\terminal-research\gnome-vte\src\ring.hh:102`
+- `C:\dev\terminal-research\gnome-vte\src\ring.hh:132`
+- `C:\dev\terminal-research\gnome-vte\src\ring.hh:241`
+- `C:\dev\terminal-research\gnome-vte\src\ring.hh:259`
+- `C:\dev\terminal-research\gnome-vte\src\cell.hh:238`
+
 But huge scrollback is a product thesis, not a default vector length. Ghostty's
 page list is the stronger long-term reference: pages are self-contained chunks
 ordered from top scrollback to active page, with viewport pins and byte budgets.
@@ -179,7 +221,7 @@ Local refs:
 - `C:\dev\wezterm\mux\src\pane.rs:167`
 - `C:\dev\wezterm\mux\src\renderable.rs:128`
 
-Kepler implication: M1 can use simple ring storage, but the public API should
+Hera implication: M1 can use simple ring storage, but the public API should
 already speak in stable row handles, byte budgets and snapshots, not raw
 `Vec<Row>` ownership.
 
@@ -208,12 +250,25 @@ Local refs:
 - `C:\dev\wezterm\term\src\screen.rs:287`
 - [Contour inventory](reference-inventory/contour.md)
 - `C:\dev\contour\docs\vt-extensions\line-reflow-mode.md:5`
+- [Windows Terminal inventory](reference-inventory/windows-terminal.md)
+- `C:\dev\terminal\src\cascadia\TerminalCore\Terminal.cpp:303`
+- `C:\dev\terminal\src\buffer\out\textBuffer.cpp:2718`
+- `C:\dev\terminal\src\buffer\out\ut_textbuffer\ReflowTests.cpp:403`
 - `C:\dev\contour\src\vtbackend\Grid.cpp:593`
 - `C:\dev\contour\src\vtbackend\Grid.cpp:813`
 - `C:\dev\contour\src\vtbackend\Grid_test.cpp:512`
+- [GNOME VTE inventory](reference-inventory/gnome-vte.md)
+- `C:\dev\terminal-research\gnome-vte\doc\rewrap.txt:109`
+- `C:\dev\terminal-research\gnome-vte\doc\rewrap.txt:117`
+- `C:\dev\terminal-research\gnome-vte\doc\rewrap.txt:129`
+- `C:\dev\terminal-research\gnome-vte\src\ring.cc:1338`
+- `C:\dev\terminal-research\gnome-vte\src\ring.cc:1372`
+- `C:\dev\terminal-research\gnome-vte\src\ring.cc:1602`
 - `C:\dev\terminal-research\gnome-vte\src\vte.cc:8303`
+- `C:\dev\terminal-research\gnome-vte\src\vte.cc:8342`
+- `C:\dev\terminal-research\gnome-vte\src\vte.cc:8345`
 
-Kepler implication: reflow must be fixture-driven from day one. Do not expose a
+Hera implication: reflow must be fixture-driven from day one. Do not expose a
 "correct by intuition" resize path. Track wrap metadata in rows before
 attempting broad compatibility.
 
@@ -225,7 +280,7 @@ state exposes dirty state, row iterators, cell iterators, styles, graphemes,
 selection and UTF-8 text. Alacritty exposes renderable content and renderable
 cells. Microsoft Terminal's docs show a clean conceptual split, while its own
 control layer contains a noted circular dependency between terminal and
-renderer, which Kepler should avoid.
+renderer, which Hera should avoid.
 
 Ghostling is the smallest host proof of the same boundary: PTY bytes are fed
 into libghostty, `ghostty_render_state_update` snapshots terminal state, and the
@@ -241,10 +296,21 @@ Local refs:
 - [Ghostling inventory](reference-inventory/ghostling.md)
 - `C:\dev\ghostling\main.c:1383`
 - `C:\dev\ghostling\main.c:1531`
-- `C:\dev\terminal-research\microsoft-terminal\doc\ORGANIZATION.md:29`
-- `C:\dev\terminal-research\microsoft-terminal\src\cascadia\TerminalControl\ControlCore.h:443`
+- [Windows Terminal inventory](reference-inventory/windows-terminal.md)
+- `C:\dev\terminal\src\renderer\inc\IRenderData.hpp:51`
+- `C:\dev\terminal\src\renderer\inc\IRenderEngine.hpp:62`
+- `C:\dev\terminal\src\renderer\base\renderer.cpp:1012`
+- `C:\dev\terminal\src\cascadia\TerminalControl\ControlCore.h:443`
+- [GNOME VTE inventory](reference-inventory/gnome-vte.md)
+- `C:\dev\terminal-research\gnome-vte\src\ringview.hh:54`
+- `C:\dev\terminal-research\gnome-vte\src\vte.cc:9426`
+- `C:\dev\terminal-research\gnome-vte\src\vte.cc:9445`
+- `C:\dev\terminal-research\gnome-vte\src\vte.cc:10075`
+- `C:\dev\terminal-research\gnome-vte\src\vte.cc:10110`
+- `C:\dev\terminal-research\gnome-vte\src\drawing-cairo.hh:27`
+- `C:\dev\terminal-research\gnome-vte\src\drawing-gsk.hh:47`
 
-Kepler implication: `terminal-render-model` should define stable serializable
+Hera implication: `terminal-render-model` should define stable serializable
 types: `RenderFrame`, `RenderLine`, `RenderCell`, `Damage`, `CursorState`,
 `Viewport`, `Selection`, `HyperlinkSpan`, and image placeholders. The core
 should never import GPUI.
@@ -269,22 +335,30 @@ Local refs:
 - `C:\dev\contour\src\vtpty\Pty.cpp:17`
 - `C:\dev\contour\src\vtpty\ConPty.cpp:17`
 - `C:\dev\contour\src\vtpty\UnixPty.cpp:67`
+- [GNOME VTE inventory](reference-inventory/gnome-vte.md)
+- `C:\dev\terminal-research\gnome-vte\src\pty.hh:30`
+- `C:\dev\terminal-research\gnome-vte\src\vte\vtepty.h:62`
+- `C:\dev\terminal-research\gnome-vte\src\pty.cc:184`
+- `C:\dev\terminal-research\gnome-vte\src\pty.cc:281`
+- `C:\dev\terminal-research\gnome-vte\src\pty.cc:425`
 
-ConPTY must be treated as an async VT stream transport, not as Kepler's
+ConPTY must be treated as an async VT stream transport, not as Hera's
 authoritative buffer. Microsoft Terminal samples and internals show the host
 pipe/write model, resize pathways and close lifecycle. Resize, pipe ownership,
 EOF, cursor inheritance and row preservation deserve isolated tests.
 
 Local refs:
 
-- `C:\dev\terminal-research\microsoft-terminal\samples\ConPTY\MiniTerm\MiniTerm\Native\PseudoConsoleApi.cs:22`
-- `C:\dev\terminal-research\microsoft-terminal\src\winconpty\winconpty.cpp:439`
-- `C:\dev\terminal-research\microsoft-terminal\src\winconpty\winconpty.cpp:508`
-- `C:\dev\terminal-research\microsoft-terminal\src\winconpty\winconpty.cpp:580`
+- [Windows Terminal inventory](reference-inventory/windows-terminal.md)
+- `C:\dev\terminal\src\cascadia\TerminalConnection\ITerminalConnection.idl:22`
+- `C:\dev\terminal\src\cascadia\TerminalConnection\ConptyConnection.cpp:553`
+- `C:\dev\terminal\src\cascadia\TerminalConnection\ConptyConnection.cpp:667`
+- `C:\dev\terminal\src\winconpty\winconpty.cpp:462`
+- `C:\dev\terminal\samples\ConPTY\EchoCon\EchoCon\EchoCon.cpp:91`
 
 ### Snapshot And Replay
 
-Kepler's replay should not depend only on reparsing the entire raw byte stream.
+Hera's replay should not depend only on reparsing the entire raw byte stream.
 The durable shape is:
 
 1. Raw byte/event log with timestamps and PTY boundaries.
@@ -296,7 +370,7 @@ vt100-rust is useful here because it exposes parser, screen, contents and
 contents diff APIs, plus JSON-like fixture helpers. Alacritty has byte recording
 plus expected terminal state tests. libvterm ships headless harnesses and reflow
 fixtures. xterm.js has serialization and headless APIs, but async parser hooks
-can pause input and are a warning for Kepler's throughput-sensitive design.
+can pause input and are a warning for Hera's throughput-sensitive design.
 
 Local refs:
 
@@ -321,15 +395,23 @@ Local refs:
 
 - `C:\dev\terminal-research\ghostty\src\terminal\Screen.zig:1`
 - `C:\dev\terminal-research\ghostty\src\terminal\Terminal.zig:12097`
-- `C:\dev\terminal-research\microsoft-terminal\doc\specs\#11000 - Marks\Shell-Integration-Marks.md:145`
-- `C:\dev\terminal-research\microsoft-terminal\doc\specs\#11000 - Marks\Shell-Integration-Marks.md:307`
+- [Windows Terminal inventory](reference-inventory/windows-terminal.md)
+- `C:\dev\terminal\doc\specs\#11000 - Marks\Shell-Integration-Marks.md:144`
+- `C:\dev\terminal\doc\specs\#11000 - Marks\Shell-Integration-Marks.md:179`
+- `C:\dev\terminal\src\buffer\out\textBuffer.cpp:3432`
 - [Contour inventory](reference-inventory/contour.md)
 - `C:\dev\contour\docs\vt-extensions\osc-133-shell-integration.md:7`
 - `C:\dev\contour\docs\vt-extensions\semantic-block-query.md:3`
 - `C:\dev\contour\src\vtbackend\SemanticBlockTracker.h:30`
 - `C:\dev\contour\src\vtbackend\Screen.cpp:4094`
+- [GNOME VTE inventory](reference-inventory/gnome-vte.md)
+- `C:\dev\terminal-research\gnome-vte\src\attr.hh:24`
+- `C:\dev\terminal-research\gnome-vte\src\cell.hh:227`
+- `C:\dev\terminal-research\gnome-vte\src\vteseq.cc:1746`
+- `C:\dev\terminal-research\gnome-vte\src\vteseq.cc:1826`
+- `C:\dev\terminal-research\gnome-vte\src\vteseq.cc:7920`
 
-Kepler implication: `terminal-protocol` can store semantic events, but
+Hera implication: `terminal-protocol` can store semantic events, but
 `terminal-core` must remain correct if every semantic detector is disabled.
 
 ### Advanced Protocols
@@ -360,8 +442,15 @@ Local refs:
 - `C:\dev\contour\src\vtbackend\Functions.h:662`
 - [Rio inventory](reference-inventory/rio.md)
 - `C:\dev\rio\rio-backend\src\ansi\sixel.rs:868`
+- [GNOME VTE inventory](reference-inventory/gnome-vte.md)
+- `C:\dev\terminal-research\gnome-vte\meson_options.txt:111`
+- `C:\dev\terminal-research\gnome-vte\src\parser-seq.py:981`
+- `C:\dev\terminal-research\gnome-vte\src\vteseq.cc:5495`
+- `C:\dev\terminal-research\gnome-vte\src\sixel-parser.hh:165`
+- `C:\dev\terminal-research\gnome-vte\src\sixel-context.cc:463`
+- `C:\dev\terminal-research\gnome-vte\src\ring.cc:1741`
 
-Kepler implication: M1 should parse unknown OSC/DCS/APC/PM payloads safely,
+Hera implication: M1 should parse unknown OSC/DCS/APC/PM payloads safely,
 preserve metadata hooks and expose image placeholders. Do not promise image
 rendering until the core harness is credible.
 
@@ -450,7 +539,7 @@ Owns debugging and dogfood commands.
 
 ## Language And Platform Strategy
 
-Decision: Kepler stays Rust-first and Rust-public. The core product is a Rust
+Decision: Hera stays Rust-first and Rust-public. The core product is a Rust
 workspace with a cross-platform API. Non-Rust languages are not implementation
 languages for the engine. They can appear only as reference projects, fixture
 sources, generated bindings, or narrow platform shims when Rust bindings are not
@@ -465,7 +554,7 @@ Rationale:
   and related target keys, so platform code can be isolated without splitting
   the codebase by language.
 - Windows APIs can be called from Rust through `windows-rs`; ConPTY does not
-  require C# or C++ in Kepler.
+  require C# or C++ in Hera.
 - Unix PTY code can stay Rust, using Rust wrappers around POSIX-like APIs plus
   direct libc/rustix/nix calls where needed.
 - Apple framework interop can stay Rust through `objc2` or framework crates if
@@ -478,7 +567,7 @@ Rationale:
 | Zone | Language | Windows | Linux distros | macOS | Decision |
 |---|---|---|---|---|---|
 | Terminal state core | Rust only | Same core crate | Same core crate | Same core crate | No FFI, no platform imports. |
-| VT parser integration | Rust | Wrap `alacritty/vte` | Wrap `alacritty/vte` | Wrap `alacritty/vte` | Parser crate hidden behind Kepler actions. |
+| VT parser integration | Rust | Wrap `alacritty/vte` | Wrap `alacritty/vte` | Wrap `alacritty/vte` | Parser crate hidden behind Hera actions. |
 | Protocol and replay schema | Rust | Same types | Same types | Same types | Serializable Rust types, no OS coupling. |
 | Render model | Rust | Same snapshot model | Same snapshot model | Same snapshot model | Renderer-neutral API consumed by adapters. |
 | Scrollback storage | Rust | Same storage engine | Same storage engine | Same storage engine | Target-independent chunks/pages and budgets. |
@@ -490,7 +579,7 @@ Rationale:
 | Linux PTY impl | Rust plus Unix syscalls | Not compiled | Use `rustix`, `libc`, `nix`, or direct bindings | Not compiled | Test glibc and musl targets, not every distro manually. |
 | macOS PTY impl | Rust plus Unix syscalls | Not compiled | Not compiled | Use Unix PTY path first | Objective-C not needed for PTY. |
 | macOS native adapter | Rust plus `objc2` only if needed | Not compiled | Not compiled | Optional future adapter | Avoid Objective-C source unless Rust bindings fail. |
-| GPUI/Paneflow adapter | Rust | Same adapter boundary | Same adapter boundary | Same adapter boundary | Kepler core exports Rust render model. |
+| GPUI/Paneflow adapter | Rust | Same adapter boundary | Same adapter boundary | Same adapter boundary | Hera core exports Rust render model. |
 | Future C ABI | Rust crate exporting C ABI | Optional | Optional | Optional | Generated headers via `cbindgen`, no C core. |
 | Reference engines | Their own languages | Read and test against | Read and test against | Read and test against | C, C++, C#, JS, Zig remain references. |
 
@@ -501,7 +590,7 @@ Adding non-Rust source requires all conditions below:
 1. The platform API cannot be called safely or maintainably from Rust.
 2. The code lives outside `terminal-core`, under a platform-specific adapter.
 3. The boundary is a tiny C-compatible ABI or OS call wrapper.
-4. No Kepler-owned core type crosses the boundary directly.
+4. No Hera-owned core type crosses the boundary directly.
 5. The adapter has platform-specific CI or replay fixtures.
 
 Under this rule, C#, Objective-C, Swift, Zig and C++ are rejected for M1/M2 core
@@ -510,7 +599,7 @@ system/library boundary.
 
 ### Platform Target Policy
 
-Kepler should define support by target triple and libc family:
+Hera should define support by target triple and libc family:
 
 - Windows primary: `x86_64-pc-windows-msvc`, then `aarch64-pc-windows-msvc`.
 - Linux primary: `x86_64-unknown-linux-gnu`, then
@@ -529,7 +618,7 @@ Track libc, kernel assumptions, PTY behavior, shell availability and CI images.
 | Topic | Decision | Reason |
 |---|---|---|
 | Parser | Wrap `alacritty/vte` first. | Mature Rust parser, clear separation between parsing and semantics. |
-| Parser API | Hide parser crate behind Kepler actions. | Keeps future swap/fork possible. |
+| Parser API | Hide parser crate behind Hera actions. | Keeps future swap/fork possible. |
 | Core object | `Terminal { state, parser }`. | Clean headless API, matches WezTerm-style engine shape. |
 | Scrollback | Hybrid max lines plus max bytes. | Predictable UX and memory cap. |
 | Storage | Simple ring/chunks in M1, page API reserved. | Ship core faster without locking public API to a naive vector. |
@@ -590,8 +679,20 @@ Hard fixtures from references:
   `C:\dev\contour\src\vtbackend\Grid_test.cpp:512`,
   `C:\dev\contour\src\vtbackend\SixelParser_test.cpp:25`,
   `C:\dev\contour\src\vtbackend\GoodImageProtocol_test.cpp:71`
-- Microsoft fuzzer entry:
-  `C:\dev\terminal-research\microsoft-terminal\src\host\ft_fuzzer\fuzzmain.cpp:100`
+- Windows Terminal fuzzer, ConPTY and reflow entries:
+  `C:\dev\terminal\src\host\ft_fuzzer\fuzzmain.cpp:127`,
+  `C:\dev\terminal\src\terminal\parser\ft_fuzzer\VTCommandFuzzer.cpp:72`,
+  `C:\dev\terminal\src\winconpty\ft_pty\ConPtyTests.cpp:155`,
+  `C:\dev\terminal\src\buffer\out\ut_textbuffer\ReflowTests.cpp:89`
+- GNOME VTE rewrap docs, parser, streams, Unicode and Sixel tests:
+  `C:\dev\terminal-research\gnome-vte\doc\rewrap.txt:106`,
+  `C:\dev\terminal-research\gnome-vte\doc\ambiguous.txt:41`,
+  `C:\dev\terminal-research\gnome-vte\doc\scrolling-region.txt:13`,
+  `C:\dev\terminal-research\gnome-vte\src\meson.build:854`,
+  `C:\dev\terminal-research\gnome-vte\src\meson.build:938`,
+  `C:\dev\terminal-research\gnome-vte\src\meson.build:960`,
+  `C:\dev\terminal-research\gnome-vte\src\meson.build:1029`,
+  `C:\dev\terminal-research\gnome-vte\src\meson.build:1043`
 
 Long-session fixtures:
 
@@ -613,7 +714,7 @@ semantics, buffer mutation, compatibility and observable state.
 
 ### Scrollback Trap
 
-"Huge scrollback" can quietly become unbounded RAM. Kepler needs explicit memory
+"Huge scrollback" can quietly become unbounded RAM. Hera needs explicit memory
 budgets, chunking and benchmarks before Paneflow dogfood.
 
 ### Reflow Trap
@@ -681,7 +782,7 @@ These are the public specs/docs worth keeping near the repo:
 
 | Question | Current answer |
 |---|---|
-| Parser owned, forked or wrapped? | Wrapped first, with a Kepler-owned action layer. Fork only if compatibility or performance requires it. |
+| Parser owned, forked or wrapped? | Wrapped first, with a Hera-owned action layer. Fork only if compatibility or performance requires it. |
 | Scrollback by lines, bytes or hybrid? | Hybrid. Lines for user expectation, bytes for memory truth. |
 | Snapshots store bytes, state, semantics or all three? | All three, but at different layers: state snapshot, raw event offsets, optional semantic index. |
 | PTY in v1? | Not in `terminal-core` M1. Add `terminal-pty` in M2. |

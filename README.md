@@ -1,6 +1,6 @@
-# kepler-terminal
+# Hera
 
-Nom de projet: `kepler-terminal`.
+Nom de projet: `Hera`.
 
 ## Vision
 
@@ -267,9 +267,9 @@ Publier l'engine quand il peut montrer:
 
 ## Naming
 
-Nom retenu: `kepler-terminal`.
+Nom retenu: `Hera`.
 
-Kepler communique precision, observation, invariants et systeme. C'est coherent avec la these du projet: un coeur terminal renderer-agnostic, correct, deterministe, embeddable et capable de rendre les longues sessions inspectables.
+Hera communique protection, coordination, controle et mission critique. C'est coherent avec la these du projet: un terminal agent-native qui encadre les outils IA, rend leurs longues sessions inspectables, garde le coeur renderer-agnostic correct et expose une base deterministe pour replay, snapshots et embedding.
 
 Avant publication publique, verifier au minimum:
 

@@ -3,13 +3,13 @@
 Status: initial focused pass
 Date: 2026-07-01
 Reference source: `C:\dev\rio`
-Scope: Rio architecture lessons for Kepler, especially Rust workspace shape,
+Scope: Rio architecture lessons for Hera, especially Rust workspace shape,
 terminal backend, parser/runtime loop, render snapshots, Sugarloaf renderer and
 cross-platform host boundaries.
 
 ## Executive Takeaways
 
-Rio is valuable for Kepler, but not as the primary terminal-core seed.
+Rio is valuable for Hera, but not as the primary terminal-core seed.
 Alacritty remains the cleaner M1 implementation reference for state, grid and
 reflow. Rio's strongest signal is the bridge from terminal state to modern
 rendering: dirty rows, visible snapshots, style and extras tables, batched grid
@@ -31,7 +31,7 @@ The high-value lessons:
    updates with a timeout and byte cap, then emits damage.
 6. Use Sugarloaf as a renderer reference. Its context layer selects WGPU,
    Metal, Vulkan or CPU, while font fallback stays platform-aware.
-7. Do not import graphics-protocol complexity into Kepler M1. Rio's Kitty,
+7. Do not import graphics-protocol complexity into Hera M1. Rio's Kitty,
    iTerm2 and Sixel work is useful backlog evidence, not a first milestone.
 
 Confidence: high for workspace, terminal backend, parser/runtime, PTY and
@@ -56,19 +56,19 @@ bindings (`C:\dev\rio\Cargo.toml:15`, `C:\dev\rio\Cargo.toml:17`,
 `C:\dev\rio\Cargo.toml:33`, `C:\dev\rio\Cargo.toml:36`,
 `C:\dev\rio\Cargo.toml:64`, `C:\dev\rio\Cargo.toml:78`).
 
-Kepler implication: Rio validates a Rust product split with native platform
+Hera implication: Rio validates a Rust product split with native platform
 APIs at crate boundaries. It does not justify C#, Objective-C source, Zig or
 C++ in the terminal engine.
 
 ## Codebase Map
 
-| Area | Local path | What it contains | Kepler relevance |
+| Area | Local path | What it contains | Hera relevance |
 |---|---|---|---|
 | Backend crate | `C:\dev\rio\rio-backend` | Terminal state, grid, parser handler, events, graphics protocols. | Useful for snapshot and damage design, secondary for core semantics. |
 | Grid and state | `C:\dev\rio\rio-backend\src\crosswords` | `Crosswords`, active/inactive grids, reflow, style/extras tables. | Alacritty-derived M1 storage and damage reference. |
 | Parser/runtime | `C:\dev\rio\rio-backend\src\performer` | Raw VTE parser, handler trait, synchronized updates, PTY loop. | Runtime throttling and parser boundary reference. |
 | PTY crate | `C:\dev\rio\teletypewriter` | Unix PTY and Windows ConPTY wrapper. | Secondary PTY reference after WezTerm `portable-pty`. |
-| Renderer crate | `C:\dev\rio\sugarloaf` | Sugarloaf text/grid renderer, context backends, font fallback. | Best Rio lesson for Kepler renderer model. |
+| Renderer crate | `C:\dev\rio\sugarloaf` | Sugarloaf text/grid renderer, context backends, font fallback. | Best Rio lesson for Hera renderer model. |
 | Window crate | `C:\dev\rio\rio-window` | Winit fork, X11, Wayland, macOS, Windows and WASM platform code. | Host boundary reference, not terminal core. |
 | App frontend | `C:\dev\rio\frontends\rioterm` | Window/app loop, event routing, context manager, screen renderer. | Shows how snapshots feed renderer state. |
 | Graphics protocols | `C:\dev\rio\rio-backend\src\ansi` | Kitty graphics, Sixel, iTerm2 images, glyph protocol. | Backlog and fixture source, not M1 rendering. |
@@ -76,13 +76,13 @@ C++ in the terminal engine.
 
 ## Language And Platform Decision
 
-Rio supports the existing Kepler decision: Rust stays the implementation
+Rio supports the existing Hera decision: Rust stays the implementation
 language across Windows, Linux and macOS. Native APIs appear through Rust crates
 and target-specific modules.
 
-| Kepler zone | Language | Rio evidence | Decision |
+| Hera zone | Language | Rio evidence | Decision |
 |---|---|---|---|
-| Terminal state core | Rust | `rio-backend` is a Rust crate with `cdylib` and `rlib` outputs (`C:\dev\rio\rio-backend\Cargo.toml:2`, `C:\dev\rio\rio-backend\Cargo.toml:14`). | Keep Kepler core Rust-only. |
+| Terminal state core | Rust | `rio-backend` is a Rust crate with `cdylib` and `rlib` outputs (`C:\dev\rio\rio-backend\Cargo.toml:2`, `C:\dev\rio\rio-backend\Cargo.toml:14`). | Keep Hera core Rust-only. |
 | Parser adapter | Rust | Rio owns a Rust parser wrapper and handler trait (`C:\dev\rio\rio-backend\src\performer\parser\mod.rs:32`, `C:\dev\rio\rio-backend\src\performer\handler.rs:91`). | Use Rust parser boundary. |
 | PTY adapter | Rust plus OS FFI | `teletypewriter` describes itself as a Rust PTY crate and uses Unix or Windows modules (`C:\dev\rio\teletypewriter\Cargo.toml:2`, `C:\dev\rio\teletypewriter\Cargo.toml:3`, `C:\dev\rio\teletypewriter\src\lib.rs:3`, `C:\dev\rio\teletypewriter\src\lib.rs:8`). | Use Rust traits plus platform impls. |
 | Renderer model | Rust | Sugarloaf is a Rust rendering crate with desktop and WASM intent (`C:\dev\rio\sugarloaf\Cargo.toml:2`, `C:\dev\rio\sugarloaf\Cargo.toml:22`). | Keep snapshots Rust-owned. |
@@ -90,7 +90,7 @@ and target-specific modules.
 | Window host | Rust plus platform crates | `rio-window` is a Winit fork with X11 and Wayland features (`C:\dev\rio\rio-window\Cargo.toml:14`, `C:\dev\rio\rio-window\Cargo.toml:17`). | Host crate only. |
 | Apple integration | Rust plus Objective-C runtime crates | Rio depends on `objc`/`objc2`, but in Rust manifests (`C:\dev\rio\Cargo.toml:78`, `C:\dev\rio\rio-window\Cargo.toml:60`). | No Objective-C source unless Rust bindings fail. |
 
-The cross-platform answer stays strict: Kepler should not add C#, Objective-C,
+The cross-platform answer stays strict: Hera should not add C#, Objective-C,
 Swift, Zig, C++ or C to the terminal engine. Thin FFI can exist only outside
 `terminal-core`, behind platform-specific adapters or generated C ABI surfaces.
 
@@ -110,8 +110,8 @@ X11, while WGPU is optional and forwards into Sugarloaf
 (`C:\dev\rio\rio-backend\Cargo.toml:55`,
 `C:\dev\rio\rio-backend\Cargo.toml:65`).
 
-Kepler implication: Rio's backend is more app-coupled than Kepler's
-`terminal-core` should be. Keep Kepler's core free of renderer, window and
+Hera implication: Rio's backend is more app-coupled than Hera's
+`terminal-core` should be. Keep Hera's core free of renderer, window and
 clipboard dependencies. Use Rio to study the snapshot boundary, not to copy the
 crate dependency graph.
 
@@ -144,7 +144,7 @@ max scroll limit (`C:\dev\rio\rio-backend\src\crosswords\grid\mod.rs:35`,
 and `extras_table` directly on the grid (`C:\dev\rio\rio-backend\src\crosswords\grid\mod.rs:66`,
 `C:\dev\rio\rio-backend\src\crosswords\grid\mod.rs:70`).
 
-Kepler implication:
+Hera implication:
 
 - Use Alacritty as canonical M1 grid reference.
 - Use Rio to study style interning and extras indirection.
@@ -174,7 +174,7 @@ cursor movement and display offset clamping
 `C:\dev\rio\rio-backend\src\crosswords\grid\resize.rs:367`,
 `C:\dev\rio\rio-backend\src\crosswords\grid\resize.rs:369`).
 
-Kepler implication: reflow remains a fixture-first feature. Rio gives useful
+Hera implication: reflow remains a fixture-first feature. Rio gives useful
 edge-case coverage around wide chars and cursor movement, but the authoritative
 first path should still be Alacritty plus local golden fixtures.
 
@@ -213,7 +213,7 @@ SyncUpdate mode (`C:\dev\rio\rio-backend\src\performer\handler.rs:607`,
 `C:\dev\rio\rio-backend\src\performer\handler.rs:632`,
 `C:\dev\rio\rio-backend\src\performer\handler.rs:1233`).
 
-Kepler implication: normalize parser output behind Kepler actions, but copy the
+Hera implication: normalize parser output behind Hera actions, but copy the
 idea of explicit synchronized-update budget limits. This is exactly the kind of
 policy that prevents terminal rendering from being thrashed by large TUIs.
 
@@ -247,7 +247,7 @@ platform implementations (`C:\dev\rio\teletypewriter\src\lib.rs:26`,
 `C:\dev\rio\teletypewriter\src\windows\conpty.rs:66`,
 `C:\dev\rio\teletypewriter\src\windows\conpty.rs:248`).
 
-Kepler implication: WezTerm `portable-pty` remains the cleaner PTY API
+Hera implication: WezTerm `portable-pty` remains the cleaner PTY API
 reference, but Rio adds useful runtime budget ideas: bounded locked parsing,
 evented wakeups and explicit damage events.
 
@@ -284,7 +284,7 @@ then stores `frame_damage`
 `C:\dev\rio\frontends\rioterm\src\renderer\mod.rs:376`,
 `C:\dev\rio\frontends\rioterm\src\renderer\mod.rs:405`).
 
-Kepler implication: this is the Rio pattern to keep. `terminal-core` should
+Hera implication: this is the Rio pattern to keep. `terminal-core` should
 produce a renderer-neutral snapshot with dirty rows, interned styles and
 extras/hyperlink references. GPUI, Sugarloaf or a debug CLI should consume that
 snapshot without owning terminal mutation.
@@ -349,7 +349,7 @@ the same split and registers discovered fallback fonts into the library
 `C:\dev\rio\sugarloaf\src\font\mod.rs:321`,
 `C:\dev\rio\sugarloaf\src\font\mod.rs:330`).
 
-Kepler implication: if Kepler later owns a renderer, Sugarloaf is a better
+Hera implication: if Hera later owns a renderer, Sugarloaf is a better
 modern Rust renderer reference than Alacritty's OpenGL path. But M1 should
 still define only a renderer-neutral `terminal-render-model`.
 
@@ -370,7 +370,7 @@ features (`C:\dev\rio\rio-window\Cargo.toml:17`,
 `C:\dev\rio\frontends\rioterm\src\context\mod.rs:160`,
 `C:\dev\rio\frontends\rioterm\src\context\mod.rs:310`).
 
-Kepler implication: keep this assembly role outside `terminal-core`. Kepler can
+Hera implication: keep this assembly role outside `terminal-core`. Hera can
 later have a `terminal-host` or GPUI adapter crate, but the core must stay
 headless and testable.
 
@@ -404,7 +404,7 @@ files under `tests/sixel` and compare decoded RGBA data
 `C:\dev\rio\rio-backend\src\ansi\sixel.rs:900`,
 `C:\dev\rio\rio-backend\src\ansi\sixel.rs:913`).
 
-Kepler implication: M1 should parse and cap unknown graphics payloads, but
+Hera implication: M1 should parse and cap unknown graphics payloads, but
 rendering images is not a first milestone. Rio is a strong later reference for
 state shape, memory pressure and fixtures.
 
@@ -435,10 +435,10 @@ Rio has useful targeted tests:
   `C:\dev\rio\rio-backend\src\ansi\kitty_graphics_protocol.rs:1959`,
   `C:\dev\rio\rio-backend\src\ansi\kitty_graphics_protocol.rs:1969`).
 
-Kepler implication: borrow Rio's reflow and graphics fixture ideas, but start
+Hera implication: borrow Rio's reflow and graphics fixture ideas, but start
 with Alacritty-style terminal golden snapshots for M1 correctness.
 
-## What Kepler Should Copy
+## What Hera Should Copy
 
 Copy:
 
@@ -456,11 +456,11 @@ Do not copy:
 - Renderer/window dependencies inside terminal core.
 - Full graphics-protocol surface in M1.
 - Rio's app-level coupling between backend, window, clipboard and renderer.
-- Sugarloaf as a mandatory Kepler runtime dependency.
+- Sugarloaf as a mandatory Hera runtime dependency.
 - Rio's terminal semantics as the primary reference when Alacritty and WezTerm
   provide cleaner core boundaries.
 
-## Recommended Kepler Shape
+## Recommended Hera Shape
 
 Rio reinforces this target:
 
@@ -486,7 +486,7 @@ host or renderer adapter
 ```
 
 Bottom line: Rio is a renderer-boundary and modern Rust desktop reference. For
-Kepler M1, keep Alacritty/VTE as the seed, WezTerm as the product architecture
+Hera M1, keep Alacritty/VTE as the seed, WezTerm as the product architecture
 guide, Ghostty as the long-term scrollback/render-state target, and Rio as the
 proof that a Rust terminal can feed a serious cross-platform renderer without
 moving core correctness into the renderer.

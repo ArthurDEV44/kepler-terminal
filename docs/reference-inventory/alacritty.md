@@ -3,12 +3,12 @@
 Status: initial focused pass
 Date: 2026-07-01
 Reference source: `C:\dev\alacritty`
-Scope: Alacritty architecture lessons for Kepler, especially Rust M1 core,
+Scope: Alacritty architecture lessons for Hera, especially Rust M1 core,
 grid, reflow, PTY and render damage.
 
 ## Executive Takeaways
 
-Alacritty is the strongest Rust-native reference for Kepler M1. Ghostty is a
+Alacritty is the strongest Rust-native reference for Hera M1. Ghostty is a
 better long-term architecture reference for embeddable render state and
 page-based scrollback, but Alacritty is the cleaner first implementation
 reference because it already proves a Rust terminal crate, `vte` parser
@@ -18,7 +18,7 @@ The high-value lessons:
 
 1. Use Rust as the product language. Alacritty's workspace already ships a
    Rust terminal library plus platform-specific Rust PTY code.
-2. Hide `vte` behind Kepler actions. Alacritty exposes `vte`, but Kepler should
+2. Hide `vte` behind Hera actions. Alacritty exposes `vte`, but Hera should
    keep the parser swappable.
 3. Start M1 with an Alacritty-style grid: visible rows plus scrollback in a
    ring-like storage layer.
@@ -45,7 +45,7 @@ Alacritty describes itself as a fast, cross-platform OpenGL terminal emulator
 ConPTY support (`C:\dev\alacritty\README.md:53`,
 `C:\dev\alacritty\README.md:54`).
 
-The repo is especially useful for Kepler because it separates the app crate from
+The repo is especially useful for Hera because it separates the app crate from
 the terminal crate. The workspace contains `alacritty`, `alacritty_terminal`,
 `alacritty_config` and `alacritty_config_derive`
 (`C:\dev\alacritty\Cargo.toml:1`). The `alacritty_terminal` crate describes
@@ -55,23 +55,23 @@ itself as a library for writing terminal emulators
 `C:\dev\alacritty\alacritty_terminal\src\lib.rs:19`,
 `C:\dev\alacritty\alacritty_terminal\src\lib.rs:20`).
 
-Kepler implication: Alacritty is the best local proof that Kepler can stay
+Hera implication: Alacritty is the best local proof that Hera can stay
 Rust-first across Windows, Linux and macOS without introducing C#, C++, Zig,
 Swift or Objective-C into the core.
 
 ## Codebase Map
 
-| Area | Local path | What it contains | Kepler relevance |
+| Area | Local path | What it contains | Hera relevance |
 |---|---|---|---|
 | Workspace | `C:\dev\alacritty\Cargo.toml` | Rust workspace with app, terminal and config crates. | Confirms a Rust split between core and app is viable. |
 | Terminal crate | `C:\dev\alacritty\alacritty_terminal` | `Term`, `Grid`, parser integration, PTY, events, tests. | Primary M1 reference. |
 | App crate | `C:\dev\alacritty\alacritty` | winit/glutin/OpenGL display, input, config, windows. | Host/app boundary reference, not core. |
-| Grid | `C:\dev\alacritty\alacritty_terminal\src\grid` | Storage, rows, scrollback, resize/reflow. | First Kepler storage model reference. |
+| Grid | `C:\dev\alacritty\alacritty_terminal\src\grid` | Storage, rows, scrollback, resize/reflow. | First Hera storage model reference. |
 | Terminal state | `C:\dev\alacritty\alacritty_terminal\src\term` | State, modes, selection, damage, renderable content. | Core state semantics and damage. |
 | PTY | `C:\dev\alacritty\alacritty_terminal\src\tty` | Unix PTY, Windows ConPTY, evented read/write. | `terminal-pty` reference. |
 | Event loop | `C:\dev\alacritty\alacritty_terminal\src\event_loop.rs` | PTY read/write loop, parser, wakeups. | Runtime boundary and replay recorder. |
 | Display/render | `C:\dev\alacritty\alacritty\src\display`, `C:\dev\alacritty\alacritty\src\renderer` | Renderable content, damage tracker, OpenGL renderer. | Render-model extraction lessons. |
-| Reference tests | `C:\dev\alacritty\alacritty_terminal\tests\ref.rs`, `tests/ref` | Recorded byte streams plus expected grid JSON. | Fixture model for Kepler. |
+| Reference tests | `C:\dev\alacritty\alacritty_terminal\tests\ref.rs`, `tests/ref` | Recorded byte streams plus expected grid JSON. | Fixture model for Hera. |
 
 ## Workspace And Language Strategy
 
@@ -95,13 +95,13 @@ macOS and `windows-sys` on Windows
 `C:\dev\alacritty\alacritty\Cargo.toml:88`). Linux backends are feature-gated
 with `x11` and `wayland` features (`C:\dev\alacritty\alacritty\Cargo.toml:103`).
 
-Kepler implication:
+Hera implication:
 
 - Keep core crates Rust-only.
 - Platform-specific Rust modules are enough for PTY and host adapters.
 - macOS framework integration can use Rust `objc2` where necessary.
 - App/render dependencies should live outside `terminal-core`.
-- Do not import Alacritty's OpenGL bias into Kepler's core API.
+- Do not import Alacritty's OpenGL bias into Hera's core API.
 
 ## Terminal Core Shape
 
@@ -130,7 +130,7 @@ screen contents and clears selection
 `C:\dev\alacritty\alacritty_terminal\src\term\mod.rs:723`,
 `C:\dev\alacritty\alacritty_terminal\src\term\mod.rs:731`).
 
-Kepler implication:
+Hera implication:
 
 - M1 can start with `Terminal { state, parser_boundary }` and an internal
   Alacritty-style `Grid<Cell>`.
@@ -154,11 +154,11 @@ with recorded bytes, then compare the grid
 (`C:\dev\alacritty\alacritty_terminal\tests\ref.rs:114`,
 `C:\dev\alacritty\alacritty_terminal\tests\ref.rs:116`).
 
-Kepler implication:
+Hera implication:
 
-- Reuse `vte` first, but do not leak it through public Kepler APIs.
-- Kepler should own `TerminalAction` or equivalent normalized parser actions.
-- Keeping parser state outside `Term` is viable, but Kepler may prefer
+- Reuse `vte` first, but do not leak it through public Hera APIs.
+- Hera should own `TerminalAction` or equivalent normalized parser actions.
+- Keeping parser state outside `Term` is viable, but Hera may prefer
   `Terminal { parser, state }` for simpler embedding and replay.
 - Public API should ingest bytes, not require callers to drive `vte`.
 
@@ -196,18 +196,18 @@ contents unnecessarily (`C:\dev\alacritty\alacritty_terminal\src\grid\row.rs:17`
 `C:\dev\alacritty\alacritty_terminal\src\grid\row.rs:20`). Shrinking a row can
 return removed non-empty cells for reflow (`C:\dev\alacritty\alacritty_terminal\src\grid\row.rs:70`).
 
-Kepler implication:
+Hera implication:
 
 - Use Alacritty-style ring storage for M1 because it is simple, Rust-native and
   proven.
-- Add Kepler's stable row handles and generation now, even if storage starts as
+- Add Hera's stable row handles and generation now, even if storage starts as
   ring-based.
 - Keep Ghostty-style page/chunk storage as the long-session destination.
 - Add byte budget policy before claiming "huge scrollback".
 
 ## Resize And Reflow
 
-Alacritty's resize path is the most useful Rust reference for Kepler M1. Grid
+Alacritty's resize path is the most useful Rust reference for Hera M1. Grid
 resize accepts a `reflow` flag and new line/column counts
 (`C:\dev\alacritty\alacritty_terminal\src\grid\resize.rs:14`). It grows or
 shrinks visible lines, then grows or shrinks columns
@@ -242,14 +242,14 @@ and alternate reflows only when it is the active grid
 `C:\dev\alacritty\alacritty_terminal\src\term\mod.rs:677`,
 `C:\dev\alacritty\alacritty_terminal\src\term\mod.rs:678`).
 
-Kepler implication:
+Hera implication:
 
 - Resize is not optional infrastructure. It shapes storage, cursor, selection,
   scrollback, damage and semantic handles.
 - M1 should include reflow fixtures before adding PTY complexity.
 - Wide characters, wrapped lines and saved cursor must be in the first resize
   test corpus.
-- Kepler should expose a clear policy: primary screen reflows, alternate screen
+- Hera should expose a clear policy: primary screen reflows, alternate screen
   has stricter/no-history semantics.
 
 ## Damage And Render Model
@@ -284,7 +284,7 @@ damaged (`C:\dev\alacritty\alacritty\src\display\damage.rs:140`,
 `C:\dev\alacritty\alacritty\src\display\damage.rs:152`,
 `C:\dev\alacritty\alacritty\src\display\damage.rs:163`).
 
-Kepler implication:
+Hera implication:
 
 - `terminal-render-model` should expose both content and damage.
 - Core damage should be independent from UI overlays.
@@ -316,7 +316,7 @@ and `range_semantic` uses `semantic_search_left` and `semantic_search_right`
 `C:\dev\alacritty\alacritty_terminal\src\selection.rs:313`,
 `C:\dev\alacritty\alacritty_terminal\src\selection.rs:314`).
 
-Kepler implication:
+Hera implication:
 
 - Model wide-char spacers and zero-width chars from the start.
 - Hyperlink storage belongs in core/protocol, but rendering is host-specific.
@@ -366,7 +366,7 @@ wakes the UI (`C:\dev\alacritty\alacritty_terminal\src\event_loop.rs:104`,
 `C:\dev\alacritty\alacritty_terminal\src\event_loop.rs:154`,
 `C:\dev\alacritty\alacritty_terminal\src\event_loop.rs:167`).
 
-Kepler implication:
+Hera implication:
 
 - `terminal-pty` can be Rust-only.
 - Put PTY in M2, but design core ingestion around batched bytes from day one.
@@ -398,7 +398,7 @@ The renderer itself is OpenGL-oriented. `Renderer` owns text and rectangle
 renderers (`C:\dev\alacritty\alacritty\src\renderer\mod.rs:89`) and draws
 iterators of `RenderableCell` (`C:\dev\alacritty\alacritty\src\renderer\mod.rs:177`).
 
-Kepler implication:
+Hera implication:
 
 - Alacritty's host/app split is worth copying, not its OpenGL renderer.
 - `terminal-core` must have zero GPUI/winit/glutin dependencies.
@@ -408,7 +408,7 @@ Kepler implication:
 
 ## Reference Tests And Fixtures
 
-Alacritty's reference tests are a direct template for Kepler. The macro lists
+Alacritty's reference tests are a direct template for Hera. The macro lists
 many recorded cases: alternate reset, hyperlinks, history, delete/insert lines,
 saved cursor, wrapline alt toggle, zero-width chars, VTTET cursor movement,
 scrolling, origin mode and more
@@ -427,14 +427,14 @@ initializes/truncates grid storage, then compares expected and actual grids
 `C:\dev\alacritty\alacritty_terminal\tests\ref.rs:119`,
 `C:\dev\alacritty\alacritty_terminal\tests\ref.rs:122`).
 
-Kepler implication:
+Hera implication:
 
 - Create fixture format now: bytes, size, config, expected snapshot.
-- Include Alacritty reference cases in Kepler's fixture backlog.
+- Include Alacritty reference cases in Hera's fixture backlog.
 - Test core with no PTY and no renderer.
 - Add a debug CLI command to record/replay byte streams.
 
-## What Kepler Should Copy
+## What Hera Should Copy
 
 Copy these ideas directly:
 
@@ -450,22 +450,22 @@ Copy these ideas directly:
 - Recorded byte fixtures plus serialized expected grid.
 - Rust Unix PTY and Windows ConPTY adapters.
 
-## What Kepler Should Adapt
+## What Hera Should Adapt
 
 Adapt these ideas rather than copying blindly:
 
-- Alacritty exposes `vte`; Kepler should hide it.
-- Alacritty history is line-count based; Kepler needs line plus byte budgets.
+- Alacritty exposes `vte`; Hera should hide it.
+- Alacritty history is line-count based; Hera needs line plus byte budgets.
 - Alacritty grid indices are not stable enough for semantic session indexes;
-  Kepler needs stable row handles and generations.
-- Alacritty renderable content is app-oriented; Kepler needs a serializable
+  Hera needs stable row handles and generations.
+- Alacritty renderable content is app-oriented; Hera needs a serializable
   renderer-neutral snapshot.
-- Alacritty damage is viewport-focused; Kepler should connect damage to
+- Alacritty damage is viewport-focused; Hera should connect damage to
   snapshots, replay and remote rendering.
 - Alacritty's PTY traits are useful, but WezTerm's `portable-pty` surface is a
   stronger public trait model.
 
-## What Kepler Should Avoid
+## What Hera Should Avoid
 
 Avoid these traps:
 
@@ -475,18 +475,18 @@ Avoid these traps:
 - Do not rely only on line-count history for long agent sessions.
 - Do not mix input/UI selection state with durable semantic session metadata.
 - Do not defer reflow tests. Alacritty shows that reflow is core behavior.
-- Do not add tabs/splits to Kepler core. Alacritty explicitly leaves tabs and
+- Do not add tabs/splits to Hera core. Alacritty explicitly leaves tabs and
   splits to window managers or multiplexers (`C:\dev\alacritty\README.md:104`).
 
-## Language Decision For Kepler
+## Language Decision For Hera
 
 Alacritty strengthens the Rust-first language policy more than any other
 reference so far.
 
-| Zone | Alacritty reference | Kepler language decision |
+| Zone | Alacritty reference | Hera language decision |
 |---|---|---|
 | Terminal state core | Rust `alacritty_terminal::Term` | Rust only. |
-| Parser | Rust `vte` crate | Rust wrapper behind Kepler actions. |
+| Parser | Rust `vte` crate | Rust wrapper behind Hera actions. |
 | Grid/storage | Rust ring-like `Storage<Row<Cell>>` | Rust, with stable handles added. |
 | Resize/reflow | Rust `grid/resize.rs` | Rust, fixture-driven. |
 | PTY Unix | Rust `rustix-openpty` path | Rust plus Unix syscalls/bindings. |
@@ -498,7 +498,7 @@ reference so far.
 Decision: Alacritty is the practical M1 blueprint. Ghostty remains the richer
 long-term render-state and scrollback architecture reference.
 
-## Follow-Up Fixtures For Kepler
+## Follow-Up Fixtures For Hera
 
 Alacritty-inspired fixture backlog:
 
@@ -524,11 +524,11 @@ Open points not fully audited in this first Alacritty file:
 
 - Exact performance tradeoff between Alacritty storage and Ghostty page storage
   for 100k to 1M lines.
-- Whether Kepler should fork/patch `vte` or wrap only.
+- Whether Hera should fork/patch `vte` or wrap only.
 - How much of Alacritty's damage model survives a remote/snapshot renderer.
 - Whether Alacritty's PTY loop backpressure is enough for Paneflow sessions.
 - How to merge Alacritty-style grid storage with Ghostty-style tracked pins.
 
 None of these block M1. The immediate extraction is clear: use Alacritty as the
-Rust implementation template, then add Kepler-specific stable handles, snapshots,
+Rust implementation template, then add Hera-specific stable handles, snapshots,
 byte budgets and semantic sidecars.

@@ -3,7 +3,7 @@
 Status: initial focused pass
 Date: 2026-07-01
 Reference source: `C:\dev\ghostling`
-Scope: Ghostling lessons for Kepler, especially libghostty embedding, host
+Scope: Ghostling lessons for Hera, especially libghostty embedding, host
 effects, PTY to terminal ingestion, render-state iteration, input encoding and
 renderer independence.
 
@@ -27,9 +27,9 @@ The high-value lessons:
 4. Host effects matter. The terminal needs callbacks or effect outputs for PTY
    responses, size queries, device attributes, title changes and similar
    protocol side effects.
-5. Do not copy Ghostling's language stack for Kepler. C is used here to
+5. Do not copy Ghostling's language stack for Hera. C is used here to
    showcase the C API, not because C is the right engine language.
-6. Do not copy Ghostling's PTY layer for cross-platform Kepler. It is Unix-only
+6. Do not copy Ghostling's PTY layer for cross-platform Hera. It is Unix-only
    in this repo, built around `forkpty`, `fcntl`, `ioctl` and `libutil`.
 7. Do copy the narrowness: no tabs, splits, session management, config system
    or renderer dependency in the terminal core.
@@ -56,36 +56,36 @@ and that libghostty lets any renderer layer on top of its render-state API
 (`C:\dev\ghostling\README.md:160`, `C:\dev\ghostling\README.md:165`,
 `C:\dev\ghostling\README.md:168`).
 
-Kepler implication: this is the cleanest small example of the host boundary
-Kepler wants to expose, even though Kepler should implement its core in Rust.
+Hera implication: this is the cleanest small example of the host boundary
+Hera wants to expose, even though Hera should implement its core in Rust.
 
 ## Codebase Map
 
-| Area | Local path | What it contains | Kepler relevance |
+| Area | Local path | What it contains | Hera relevance |
 |---|---|---|---|
 | Host app | `C:\dev\ghostling\main.c` | Single-file C host: PTY, input, effects, render loop. | Best small embedding walkthrough. |
-| Build | `C:\dev\ghostling\CMakeLists.txt` | CMake, Raylib, fetched Ghostty commit, font header generation. | Shows libghostty-vt consumer build shape, not Kepler stack. |
+| Build | `C:\dev\ghostling\CMakeLists.txt` | CMake, Raylib, fetched Ghostty commit, font header generation. | Shows libghostty-vt consumer build shape, not Hera stack. |
 | Dev shell | `C:\dev\ghostling\flake.nix` | Zig 0.15.2, CMake, Ninja, Linux X/Wayland deps, Darwin SDK cleanup. | Dependency evidence and platform limits. |
 | Font asset | `C:\dev\ghostling\fonts` | Embedded JetBrains Mono font. | Simple renderer fixture, not core logic. |
 | Repo notes | `C:\dev\ghostling\AGENTS.md` | Build commands and libghostty header location after build. | Confirms generated/fetched API surface. |
 
 ## Language And Platform Decision
 
-Ghostling does not change Kepler's language decision. It is a C demo because
+Ghostling does not change Hera's language decision. It is a C demo because
 libghostty wants to showcase a broad, minimal C API, not because terminal cores
 should be written in C.
 
-| Zone | Ghostling evidence | Kepler decision |
+| Zone | Ghostling evidence | Hera decision |
 |---|---|---|
-| Terminal core | Ghostling delegates core state to `libghostty-vt`, not to its C app (`C:\dev\ghostling\README.md:30`). | Keep Kepler core Rust-owned. |
+| Terminal core | Ghostling delegates core state to `libghostty-vt`, not to its C app (`C:\dev\ghostling\README.md:30`). | Keep Hera core Rust-owned. |
 | Public embedding API | README says the C API enables thin bindings in many languages (`C:\dev\ghostling\README.md:152`, `C:\dev\ghostling\README.md:155`). | Future C ABI is valid, but generated around Rust. |
 | Host renderer | Raylib is explicitly optional (`C:\dev\ghostling\README.md:160`). | Keep `terminal-render-model` renderer-neutral. |
 | PTY | Main code uses Unix headers, `forkpty`, nonblocking fd and `ioctl` (`C:\dev\ghostling\main.c:13`, `C:\dev\ghostling\main.c:15`, `C:\dev\ghostling\main.c:56`, `C:\dev\ghostling\main.c:87`, `C:\dev\ghostling\main.c:1458`). | Use Rust PTY traits and per-platform impls. |
 | Windows | README says Ghostling itself has not implemented/tested Windows, although libghostty-vt supports it (`C:\dev\ghostling\README.md:69`). | Do not use Ghostling as Windows reference. |
-| Build stack | CMake project is C-only and fetches Ghostty/Raylib (`C:\dev\ghostling\CMakeLists.txt:1`, `C:\dev\ghostling\CMakeLists.txt:2`, `C:\dev\ghostling\CMakeLists.txt:18`, `C:\dev\ghostling\CMakeLists.txt:38`). | Kepler remains Cargo/Rust-first. |
+| Build stack | CMake project is C-only and fetches Ghostty/Raylib (`C:\dev\ghostling\CMakeLists.txt:1`, `C:\dev\ghostling\CMakeLists.txt:2`, `C:\dev\ghostling\CMakeLists.txt:18`, `C:\dev\ghostling\CMakeLists.txt:38`). | Hera remains Cargo/Rust-first. |
 
 The right interpretation: Ghostling validates a C ABI as an eventual
-distribution surface. It rejects C as a reason to move Kepler's internal engine
+distribution surface. It rejects C as a reason to move Hera's internal engine
 out of Rust.
 
 ## Build And Dependency Shape
@@ -113,8 +113,8 @@ The Nix shell pins Zig 0.15.2 and adds Linux X/Wayland libraries
 `C:\dev\ghostling\flake.nix:25`, `C:\dev\ghostling\flake.nix:34`,
 `C:\dev\ghostling\flake.nix:35`, `C:\dev\ghostling\flake.nix:42`).
 
-Kepler implication: this is a good external-consumer build example for a future
-ABI package, not a template for Kepler's Rust workspace.
+Hera implication: this is a good external-consumer build example for a future
+ABI package, not a template for Hera's Rust workspace.
 
 ## PTY And Byte Ingestion
 
@@ -131,8 +131,8 @@ remainder on `EAGAIN` (`C:\dev\ghostling\main.c:98`,
 `ghostty_terminal_vt_write` (`C:\dev\ghostling\main.c:126`,
 `C:\dev\ghostling\main.c:132`, `C:\dev\ghostling\main.c:138`).
 
-Kepler implication: the flow is right, the implementation is not portable
-enough. For Kepler:
+Hera implication: the flow is right, the implementation is not portable
+enough. For Hera:
 
 - `terminal-core` should expose `write_bytes`.
 - `terminal-pty` should own POSIX PTY and Windows ConPTY.
@@ -162,8 +162,8 @@ result to the PTY (`C:\dev\ghostling\main.c:444`,
 event consumed text (`C:\dev\ghostling\main.c:557`,
 `C:\dev\ghostling\main.c:562`).
 
-Kepler implication: input encoding belongs outside `terminal-core`, but it
-needs a terminal-mode aware API. Kepler should eventually provide a Rust input
+Hera implication: input encoding belongs outside `terminal-core`, but it
+needs a terminal-mode aware API. Hera should eventually provide a Rust input
 encoder crate or host helper, rather than forcing each UI adapter to maintain
 escape tables.
 
@@ -190,7 +190,7 @@ Main then attaches those effects to the terminal through `ghostty_terminal_set`
 `C:\dev\ghostling\main.c:1320`, `C:\dev\ghostling\main.c:1322`,
 `C:\dev\ghostling\main.c:1324`, `C:\dev\ghostling\main.c:1326`).
 
-Kepler implication: this validates a host-effect surface, but Kepler should
+Hera implication: this validates a host-effect surface, but Hera should
 prefer queued effects over direct reentrant callbacks. A Rust API like
 `Terminal::drain_effects()` is easier to reason about than arbitrary host calls
 during parsing.
@@ -224,8 +224,8 @@ the end of the frame (`C:\dev\ghostling\main.c:936`,
 `C:\dev\ghostling\main.c:938`, `C:\dev\ghostling\main.c:1014`,
 `C:\dev\ghostling\main.c:1016`).
 
-Kepler implication: this is exactly the shape for `terminal-render-model`.
-Instead of exposing renderer callbacks, Kepler should expose a stable pull
+Hera implication: this is exactly the shape for `terminal-render-model`.
+Instead of exposing renderer callbacks, Hera should expose a stable pull
 snapshot with colors, cursor, rows, cells, style, graphemes and dirty flags.
 
 ## Kitty Graphics And Advanced Protocols
@@ -251,7 +251,7 @@ rectangle and offsets, then uploads a temporary Raylib texture
 inefficient because every visible image is re-uploaded every frame
 (`C:\dev\ghostling\main.c:657`, `C:\dev\ghostling\main.c:662`).
 
-Kepler implication: Ghostling shows why image protocols should remain M1
+Hera implication: Ghostling shows why image protocols should remain M1
 metadata/placeholders. Rendering them correctly requires storage limits, decode
 hooks, placement layers, media policies and renderer caches.
 
@@ -278,10 +278,10 @@ the child is alive (`C:\dev\ghostling\main.c:1520`,
 state is updated and drawn (`C:\dev\ghostling\main.c:1531`,
 `C:\dev\ghostling\main.c:1546`, `C:\dev\ghostling\main.c:1548`).
 
-Kepler implication: great host-loop reference for `terminal-cli` or a future
+Hera implication: great host-loop reference for `terminal-cli` or a future
 demo host. Not enough for a production cross-platform runtime.
 
-## What Kepler Should Copy
+## What Hera Should Copy
 
 Copy:
 
@@ -296,7 +296,7 @@ Copy:
 
 Do not copy:
 
-- C as Kepler's core implementation language.
+- C as Hera's core implementation language.
 - Raylib as a dependency or design constraint.
 - Unix-only PTY assumptions.
 - Drop-on-backpressure behavior for product code.
@@ -304,7 +304,7 @@ Do not copy:
 - Per-frame image texture upload.
 - Broad image rendering in M1.
 
-## Recommended Kepler Shape
+## Recommended Hera Shape
 
 Ghostling reinforces this target:
 
@@ -340,5 +340,5 @@ host adapter
 ```
 
 Bottom line: Ghostling is the best small proof that an embeddable terminal core
-can be renderer-agnostic and host-driven. For Kepler, it strengthens the API
+can be renderer-agnostic and host-driven. For Hera, it strengthens the API
 boundary, but it does not weaken the Rust-first decision.

@@ -3,7 +3,7 @@
 Status: initial focused pass
 Date: 2026-07-01
 Reference source: `C:\dev\wezterm`
-Scope: WezTerm architecture lessons for Kepler, especially Rust terminal core,
+Scope: WezTerm architecture lessons for Hera, especially Rust terminal core,
 parser/action layering, PTY abstraction, mux/runtime, renderable state and
 cross-platform host boundaries.
 
@@ -11,7 +11,7 @@ cross-platform host boundaries.
 
 WezTerm is the strongest Rust reference for a full terminal product architecture:
 terminal core, parser, PTY, mux, GUI, remote client, font/rendering and platform
-windowing all live in one Rust workspace. For Kepler, its value is not that M1
+windowing all live in one Rust workspace. For Hera, its value is not that M1
 should copy WezTerm's full surface. Its value is that it proves the main product
 layers can remain Rust while platform-specific code is isolated behind crates
 and traits.
@@ -30,9 +30,9 @@ The high-value lessons:
    key concept that makes scrollback, dirty rows and remote render caches sane.
 5. Track changes with sequence numbers. WezTerm's lines carry `SequenceNo`,
    which lets mux/client layers ask what changed since a known version.
-6. Treat mux as a later layer. The mux is powerful, but M1 Kepler should start
+6. Treat mux as a later layer. The mux is powerful, but M1 Hera should start
    with the same boundaries, not the same feature volume.
-7. Keep Kepler Rust-first across Windows, Linux and macOS. WezTerm uses native
+7. Keep Hera Rust-first across Windows, Linux and macOS. WezTerm uses native
    platform dependencies, but they sit at window/font/PTY boundaries, not in the
    terminal state core.
 
@@ -45,7 +45,7 @@ the renderer/windowing crates rather than auditing every WebGPU/OpenGL path.
 
 The root README positions WezTerm as a GPU-accelerated cross-platform terminal
 emulator and multiplexer implemented in Rust (`C:\dev\wezterm\README.md:3`).
-That matters for Kepler because WezTerm is not only a terminal model; it is a
+That matters for Hera because WezTerm is not only a terminal model; it is a
 shipping Rust product across desktop platforms.
 
 The workspace is broad. The root `Cargo.toml` includes product crates such as
@@ -64,16 +64,16 @@ Wayland, X11, WinAPI/Windows and WGPU (`C:\dev\wezterm\Cargo.toml:66`,
 `C:\dev\wezterm\Cargo.toml:265`, `C:\dev\wezterm\Cargo.toml:268`,
 `C:\dev\wezterm\Cargo.toml:270`).
 
-Kepler implication: WezTerm validates Rust-first architecture, not "pure Rust
+Hera implication: WezTerm validates Rust-first architecture, not "pure Rust
 with zero native bindings." Native OS APIs are acceptable when hidden behind
 the right crate boundary.
 
 ## Codebase Map
 
-| Area | Local path | What it contains | Kepler relevance |
+| Area | Local path | What it contains | Hera relevance |
 |---|---|---|---|
 | Terminal core | `C:\dev\wezterm\term` | `Terminal`, `TerminalState`, `Screen`, performer, VT state. | Best reference for a Rust engine crate boundary. |
-| Parser tables | `C:\dev\wezterm\vtparse` | DEC ANSI state machine, UTF-8, CSI/OSC/DCS callbacks. | Parser comparison with `alacritty-vte`, not first choice for Kepler M1. |
+| Parser tables | `C:\dev\wezterm\vtparse` | DEC ANSI state machine, UTF-8, CSI/OSC/DCS callbacks. | Parser comparison with `alacritty-vte`, not first choice for Hera M1. |
 | Escape parser | `C:\dev\wezterm\wezterm-escape-parser` | Converts parser callbacks into typed `Action`, `CSI`, OSC, Sixel, Kitty image actions. | Reference for `terminal-protocol` enum design. |
 | Surface | `C:\dev\wezterm\wezterm-surface` | Lines, cells, sequence numbers, hyperlinks, clusters. | Render model and dirty-line reference. |
 | PTY | `C:\dev\wezterm\pty` | `portable-pty`, Unix PTY, Windows ConPTY. | Primary `terminal-pty` reference. |
@@ -85,7 +85,7 @@ the right crate boundary.
 
 ## Language And Platform Decision
 
-WezTerm strongly supports staying Rust-first for Kepler.
+WezTerm strongly supports staying Rust-first for Hera.
 
 The terminal core is a Rust crate named `wezterm-term`
 (`C:\dev\wezterm\term\Cargo.toml:3`) and describes itself as a virtual terminal
@@ -93,9 +93,9 @@ emulator core (`C:\dev\wezterm\term\Cargo.toml:7`). The PTY crate is also Rust
 and describes itself as a cross-platform PTY interface
 (`C:\dev\wezterm\pty\Cargo.toml:1`, `C:\dev\wezterm\pty\Cargo.toml:7`).
 
-The right split for Kepler:
+The right split for Hera:
 
-| Kepler zone | Language | WezTerm evidence |
+| Hera zone | Language | WezTerm evidence |
 |---|---|---|
 | Parser adapter | Rust | Parser/action crates are Rust. |
 | Terminal state | Rust | `wezterm-term` owns full state and escape handling. |
@@ -104,7 +104,7 @@ The right split for Kepler:
 | Mux/session runtime | Rust | `mux` is Rust, with threads and trait objects. |
 | Native host/windowing | Rust plus OS APIs | WezTerm pulls Cocoa, Wayland, X11, WinAPI and Windows crates at boundaries. |
 
-Do not introduce C#, Objective-C, Swift or Zig for Kepler's core. If Kepler
+Do not introduce C#, Objective-C, Swift or Zig for Hera's core. If Hera
 needs native UI or OS integration later, use thin Rust FFI or platform crates
 inside host adapters. The engine should remain Rust-owned.
 
@@ -122,7 +122,7 @@ and feeds output bytes through `advance_bytes` (`C:\dev\wezterm\term\README.md:1
 (`C:\dev\wezterm\term\src\lib.rs:1`, `C:\dev\wezterm\term\src\lib.rs:6`,
 `C:\dev\wezterm\term\src\lib.rs:11`, `C:\dev\wezterm\term\src\lib.rs:14`).
 
-Kepler implication: build a `terminal-core` crate with no GUI and no PTY
+Hera implication: build a `terminal-core` crate with no GUI and no PTY
 ownership. Feed it bytes or actions, let it write responses through a writer,
 and expose render snapshots/dirty lines.
 
@@ -145,7 +145,7 @@ The ingestion API is the important part:
 | `perform_actions` | `C:\dev\wezterm\term\src\terminal.rs:176` | Allows replaying typed actions without raw bytes. |
 | seqno bump | `C:\dev\wezterm\term\src\terminal.rs:165`, `C:\dev\wezterm\term\src\terminal.rs:177` | Change tracking begins at terminal ingress. |
 
-Kepler shape:
+Hera shape:
 
 ```text
 Terminal
@@ -171,7 +171,7 @@ WezTerm has a two-step parser design:
 2. `wezterm-escape-parser` converts low-level callbacks into typed `Action`
    values (`C:\dev\wezterm\wezterm-escape-parser\src\lib.rs:42`).
 
-`Action` is a useful model for Kepler's `terminal-protocol`: print,
+`Action` is a useful model for Hera's `terminal-protocol`: print,
 `PrintString`, control, device control, OSC, CSI, escape, Sixel, termcap and
 Kitty image actions (`C:\dev\wezterm\wezterm-escape-parser\src\lib.rs:46`,
 `C:\dev\wezterm\wezterm-escape-parser\src\lib.rs:50`,
@@ -195,7 +195,7 @@ a `VTParser`, exposes `parse`, `parse_first`, `parse_as_vec` and implements
 `C:\dev\wezterm\wezterm-escape-parser\src\parser\mod.rs:166`,
 `C:\dev\wezterm\wezterm-escape-parser\src\parser\mod.rs:210`).
 
-Kepler implication: keep `alacritty-vte` as the simpler M1 parser seed, but
+Hera implication: keep `alacritty-vte` as the simpler M1 parser seed, but
 borrow WezTerm's typed action vocabulary. The public protocol should look more
 like `Action` than like raw `vte::Perform`.
 
@@ -216,19 +216,19 @@ actions to print, control, DCS, OSC, ESC, CSI, Sixel and Kitty image handlers
 
 The semantic surface is broad:
 
-| Surface | Source | Kepler relevance |
+| Surface | Source | Hera relevance |
 |---|---|---|
 | Print path | `C:\dev\wezterm\term\src\terminalstate\performer.rs:366` | Hot path for grid mutation. |
 | CSI SGR | `C:\dev\wezterm\term\src\terminalstate\performer.rs:495`, `C:\dev\wezterm\term\src\terminalstate\mod.rs:2652` | Attribute parsing and pen updates. |
 | OSC titles | `C:\dev\wezterm\term\src\terminalstate\performer.rs:741`, `C:\dev\wezterm\term\src\terminalstate\performer.rs:753`, `C:\dev\wezterm\term\src\terminalstate\performer.rs:762` | Host title events. |
 | OSC 8 hyperlinks | `C:\dev\wezterm\term\src\terminalstate\performer.rs:769` | Cell hyperlink attribute. |
-| OSC 52 clipboard | `C:\dev\wezterm\term\src\terminalstate\performer.rs:784`, `C:\dev\wezterm\term\src\terminalstate\performer.rs:789` | Must be host-gated in Kepler. |
+| OSC 52 clipboard | `C:\dev\wezterm\term\src\terminalstate\performer.rs:784`, `C:\dev\wezterm\term\src\terminalstate\performer.rs:789` | Must be host-gated in Hera. |
 | User vars | `C:\dev\wezterm\term\src\terminalstate\performer.rs:829` | Useful later for shell integration. |
 | Semantic prompt markers | `C:\dev\wezterm\term\src\terminalstate\performer.rs:863`, `C:\dev\wezterm\term\src\terminalstate\performer.rs:886`, `C:\dev\wezterm\term\src\terminalstate\performer.rs:897` | Good future Paneflow-style intelligence surface. |
 | Current working directory | `C:\dev\wezterm\term\src\terminalstate\performer.rs:936` | Shell integration state. |
 | Dynamic colors | `C:\dev\wezterm\term\src\terminalstate\performer.rs:942`, `C:\dev\wezterm\term\src\terminalstate\performer.rs:987` | Palette mutation model. |
 
-Kepler implication: M1 should implement the essential subset explicitly and
+Hera implication: M1 should implement the essential subset explicitly and
 record unsupported actions. Do not hide unsupported behavior behind no-ops.
 
 ## TerminalState
@@ -258,7 +258,7 @@ marks lines dirty (`C:\dev\wezterm\term\src\terminalstate\mod.rs:852`,
 `C:\dev\wezterm\term\src\terminalstate\mod.rs:888`,
 `C:\dev\wezterm\term\src\terminalstate\mod.rs:928`).
 
-Kepler implication: resist scattering state across parser, renderer and PTY.
+Hera implication: resist scattering state across parser, renderer and PTY.
 One terminal state owner should coordinate modes, cursor, screens, metadata and
 dirty tracking.
 
@@ -290,7 +290,7 @@ Stable row conversion is explicit:
 | `visible_row_to_stable_row` | `C:\dev\wezterm\term\src\screen.rs:538` | Convert cursor/viewport rows to render ids. |
 | `get_changed_stable_rows` | `C:\dev\wezterm\term\src\screen.rs:909` | Dirty-row query by stable ids and seqno. |
 
-Kepler implication: adopt stable row ids early. This is the practical answer
+Hera implication: adopt stable row ids early. This is the practical answer
 to scrollback identity, remote render caches, selection stability and dirty
 render ranges.
 
@@ -310,7 +310,7 @@ semantic zone ranges and clustering
 `C:\dev\wezterm\wezterm-surface\src\line\line.rs:1027`,
 `C:\dev\wezterm\wezterm-surface\src\line\line.rs:1043`).
 
-Kepler implication: store per-line change identity, not just a coarse "screen
+Hera implication: store per-line change identity, not just a coarse "screen
 dirty" boolean. Renderer and host APIs need to ask for changed rows without
 rebuilding the full viewport every frame.
 
@@ -334,7 +334,7 @@ Key helpers:
 | `terminal_get_lines` | `C:\dev\wezterm\mux\src\renderable.rs:113` | Copy lines for rendering or remote transfer. |
 | `terminal_get_dimensions` | `C:\dev\wezterm\mux\src\renderable.rs:128` | Snapshot viewport and scrollback dimensions. |
 
-Kepler implication: define `RenderSnapshot` or `RenderableTerminal` as a core
+Hera implication: define `RenderSnapshot` or `RenderableTerminal` as a core
 output boundary. Renderer code should consume stable rows, visible cells,
 cursor and dimensions, not mutate terminal state.
 
@@ -349,7 +349,7 @@ a command, clone a reader and take a writer (`C:\dev\wezterm\pty\src\lib.rs:9`,
 
 The traits are exactly the right abstraction shape:
 
-| Trait/API | Source | Kepler relevance |
+| Trait/API | Source | Hera relevance |
 |---|---|---|
 | `PtySize` | `C:\dev\wezterm\pty\src\lib.rs:63` | Rows, cols, pixel width/height. |
 | `MasterPty` | `C:\dev\wezterm\pty\src\lib.rs:88` | Resize, get size, reader, writer. |
@@ -367,7 +367,7 @@ Unix uses `openpty` (`C:\dev\wezterm\pty\src\unix.rs:20`,
 Unix or ConPTY (`C:\dev\wezterm\pty\src\lib.rs:405`,
 `C:\dev\wezterm\pty\src\lib.rs:407`).
 
-Kepler implication: use `portable-pty` directly or model `terminal-pty` after
+Hera implication: use `portable-pty` directly or model `terminal-pty` after
 it. Do not build Windows PTY code in C# and do not let ConPTY details leak into
 terminal-core.
 
@@ -408,7 +408,7 @@ terminal (`C:\dev\wezterm\mux\src\localpane.rs:417`,
 the PTY bridge (`C:\dev\wezterm\mux\src\localpane.rs:428`,
 `C:\dev\wezterm\mux\src\localpane.rs:436`).
 
-Kepler implication: M1 needs a smaller "session runtime" with one pane first.
+Hera implication: M1 needs a smaller "session runtime" with one pane first.
 Still, name the seams now: `Pane`, `Domain`, `Session`, `TerminalCore`,
 `PtyHandle`, `RendererSnapshot`.
 
@@ -437,7 +437,7 @@ actions and sends `PaneOutput` notifications
 (`C:\dev\wezterm\mux\src\lib.rs:121`,
 `C:\dev\wezterm\mux\src\lib.rs:128`).
 
-Kepler implication: do not parse and repaint on every tiny read if the app is
+Hera implication: do not parse and repaint on every tiny read if the app is
 trying to draw a frame. A small coalescing window plus synchronized-output
 handling should live in the runtime or render scheduler.
 
@@ -457,7 +457,7 @@ and can compute dirty rows from deltas and cursor movement
 `C:\dev\wezterm\wezterm-client\src\pane\renderable.rs:323`,
 `C:\dev\wezterm\wezterm-client\src\pane\renderable.rs:377`).
 
-Kepler implication: stable rows plus seqno unlock remote/headless rendering
+Hera implication: stable rows plus seqno unlock remote/headless rendering
 later without redesigning the core. This is worth baking into M1 even if remote
 mode is out of scope.
 
@@ -465,7 +465,7 @@ mode is out of scope.
 
 WezTerm's tests are a compatibility map. Useful areas:
 
-| Test area | Source | Kepler lesson |
+| Test area | Source | Hera lesson |
 |---|---|---|
 | C0 controls | `C:\dev\wezterm\term\src\test\c0.rs:6`, `C:\dev\wezterm\term\src\test\c0.rs:17`, `C:\dev\wezterm\term\src\test\c0.rs:24`, `C:\dev\wezterm\term\src\test\c0.rs:40` | BS, LF, CR, tabs. |
 | C1 controls | `C:\dev\wezterm\term\src\test\c1.rs:6`, `C:\dev\wezterm\term\src\test\c1.rs:19`, `C:\dev\wezterm\term\src\test\c1.rs:63` | IND, NEL, RI. |
@@ -477,11 +477,11 @@ WezTerm's tests are a compatibility map. Useful areas:
 | Images | `C:\dev\wezterm\term\src\test\image.rs:14`, `C:\dev\wezterm\term\src\test\image.rs:31` | Future Kitty/iTerm image support, not M1. |
 | Parser edge cases | `C:\dev\wezterm\vtparse\src\lib.rs:770`, `C:\dev\wezterm\vtparse\src\lib.rs:808`, `C:\dev\wezterm\vtparse\src\lib.rs:819`, `C:\dev\wezterm\vtparse\src\lib.rs:842`, `C:\dev\wezterm\vtparse\src\lib.rs:915`, `C:\dev\wezterm\vtparse\src\lib.rs:950` | OSC, CSI, colons, parameter overflow. |
 
-Kepler implication: use these as fixture inspiration after Alacritty reference
-tests. The first Kepler test suite should cover C0/C1, CSI basics, resize,
+Hera implication: use these as fixture inspiration after Alacritty reference
+tests. The first Hera test suite should cover C0/C1, CSI basics, resize,
 alternate screen, dirty rows, hyperlinks and parser overflow.
 
-## What Kepler Should Copy
+## What Hera Should Copy
 
 Copy these ideas:
 
@@ -496,19 +496,19 @@ Copy these ideas:
 9. Runtime coalescing around synchronized output.
 10. Domain/pane vocabulary for future sessions, but start with one local pane.
 
-## What Kepler Should Avoid
+## What Hera Should Avoid
 
 Avoid these traps:
 
-1. Copying WezTerm's entire mux before Kepler has one excellent local terminal.
+1. Copying WezTerm's entire mux before Hera has one excellent local terminal.
 2. Copying WezTerm's parser stack when `alacritty-vte` is simpler for M1.
 3. Letting GUI/windowing dependencies enter `terminal-core`.
 4. Treating Sixel, Kitty image, remote clients and Lua config as M1 scope.
 5. Hiding unsupported OSC/CSI behind silent no-ops.
-6. Assuming every WezTerm product concept belongs in Kepler's public API.
+6. Assuming every WezTerm product concept belongs in Hera's public API.
 7. Building platform PTY code in C#, Objective-C or Zig when Rust already works.
 
-## Recommended Kepler Shape
+## Recommended Hera Shape
 
 M1:
 
@@ -554,14 +554,14 @@ terminal-mux
   remote transport
 ```
 
-The sequencing matters. WezTerm proves the full destination, but Kepler should
+The sequencing matters. WezTerm proves the full destination, but Hera should
 not import the full destination before the core is correct.
 
 ## Bottom Line
 
 Use WezTerm as the reference for Rust product architecture: terminal core crate,
 PTY trait crate, stable row identity, seqno-based dirty lines, renderable
-snapshot boundary and mux/runtime separation. Keep Kepler full Rust for these
+snapshot boundary and mux/runtime separation. Keep Hera full Rust for these
 zones. Use `alacritty-vte` for the first parser seed, Alacritty for grid/reflow
 fixtures, Ghostty for embeddable render-state instincts, and WezTerm for the
 long-term architecture map.

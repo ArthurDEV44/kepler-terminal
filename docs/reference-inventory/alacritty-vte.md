@@ -3,12 +3,12 @@
 Status: initial focused pass
 Date: 2026-07-01
 Reference source: `C:\dev\vte`
-Scope: parser boundary lessons for Kepler, especially VT byte parsing,
+Scope: parser boundary lessons for Hera, especially VT byte parsing,
 `Perform` dispatch, ANSI semantic mapping and fixture design.
 
 ## Executive Takeaways
 
-Alacritty VTE is the cleanest Rust-native parser reference for Kepler. It is not
+Alacritty VTE is the cleanest Rust-native parser reference for Hera. It is not
 a terminal emulator, and that is exactly why it matters: it draws a hard line
 between raw byte parsing and terminal semantics.
 
@@ -18,9 +18,9 @@ The high-value lessons:
    construction and does not need C, C#, Objective-C, Zig or Swift for this
    layer.
 2. Depend on `vte` or mirror its boundary, but do not expose `vte::Perform` in
-   Kepler's public API.
+   Hera's public API.
 3. Treat `Perform` as an internal adapter that turns parser callbacks into
-   Kepler-owned actions or direct terminal-core mutations.
+   Hera-owned actions or direct terminal-core mutations.
 4. Keep `terminal-protocol` responsible for normalized actions, modes, colors,
    keyboard reports and OSC policy.
 5. Keep `terminal-core` responsible for screen state, grid, scrollback, cursor,
@@ -50,13 +50,13 @@ emulators" (`C:\dev\vte\Cargo.toml:3`), with parsing and no-std categories
 2021, MSRV 1.62.1 (`C:\dev\vte\Cargo.toml:11`,
 `C:\dev\vte\Cargo.toml:13`, `C:\dev\vte\Cargo.toml:14`).
 
-Kepler implication: `alacritty-vte` is not a reference for grid, scrollback,
+Hera implication: `alacritty-vte` is not a reference for grid, scrollback,
 PTY, renderer, tabs, sessions or UI. It is the reference for where parsing ends
-and Kepler state begins.
+and Hera state begins.
 
 ## Codebase Map
 
-| Area | Local path | What it contains | Kepler relevance |
+| Area | Local path | What it contains | Hera relevance |
 |---|---|---|---|
 | Crate metadata | `C:\dev\vte\Cargo.toml` | Features, dependencies, no-std/std split. | Confirms pure Rust parser dependency shape. |
 | README | `C:\dev\vte\README.md` | Project scope and Paul Williams parser statement. | Sets the correct mental model: parser only. |
@@ -111,7 +111,7 @@ Hard parser limits are explicit: two intermediates, sixteen OSC params and a
 default no-std OSC raw limit of 1024 bytes (`C:\dev\vte\src\lib.rs:46`,
 `C:\dev\vte\src\lib.rs:47`, `C:\dev\vte\src\lib.rs:48`).
 
-Kepler implication: parser state can live inside a `TerminalParser` struct, but
+Hera implication: parser state can live inside a `TerminalParser` struct, but
 semantic state must not. Keep cursor, modes, tabs, colors, scrollback and
 damage outside this parser layer.
 
@@ -119,7 +119,7 @@ damage outside this parser layer.
 
 The main parser API is byte-slice based:
 
-| API | Source | Kepler usage |
+| API | Source | Hera usage |
 |---|---|---|
 | `Parser::new` | `C:\dev\vte\src\lib.rs:74` | Create one parser per terminal instance. |
 | `Parser::new_with_size` | `C:\dev\vte\src\lib.rs:91` | Only relevant for no-std OSC buffer tuning. |
@@ -131,7 +131,7 @@ The changelog shows why this matters: `Parser::advance` moved to byte slices in
 `Parser::advance_until_terminated` was added to allow premature termination
 (`C:\dev\vte\CHANGELOG.md:17`).
 
-Kepler implication: feed PTY reads as slices, not byte-by-byte loops in Kepler.
+Hera implication: feed PTY reads as slices, not byte-by-byte loops in Hera.
 The parser already owns chunk traversal, partial UTF-8 and resumability.
 
 ## Ground Fast Path And UTF-8
@@ -148,8 +148,8 @@ validates UTF-8, emits replacement behavior for invalid input and preserves
 partial bytes across calls (`C:\dev\vte\src\lib.rs:611`,
 `C:\dev\vte\src\lib.rs:672`).
 
-Kepler implication: do not pre-decode PTY bytes into strings before parsing.
-Kepler should feed raw bytes and receive already-classified printable chars or
+Hera implication: do not pre-decode PTY bytes into strings before parsing.
+Hera should feed raw bytes and receive already-classified printable chars or
 control actions.
 
 ## State Machine Surface
@@ -165,8 +165,8 @@ Important transition handlers:
 | OSC string | `C:\dev\vte\src\lib.rs:409` | Operating system command parsing. |
 | Ground dispatch | `C:\dev\vte\src\lib.rs:724` | Printable text and C0/C1 execution. |
 
-Kepler implication: Kepler should not reimplement these transitions in M1.
-The immediate value is a battle-tested parser boundary while Kepler invests in
+Hera implication: Hera should not reimplement these transitions in M1.
+The immediate value is a battle-tested parser boundary while Hera invests in
 state, renderer model and host integration.
 
 ## Perform Boundary
@@ -174,7 +174,7 @@ state, renderer model and host integration.
 `Perform` is the contract where raw parsing becomes terminal behavior. The trait
 starts at `C:\dev\vte\src\lib.rs:763`.
 
-| `Perform` method | Source | Kepler-owned target |
+| `Perform` method | Source | Hera-owned target |
 |---|---|---|
 | `print(char)` | `C:\dev\vte\src\lib.rs:765` | Insert printable char with active attributes. |
 | `execute(u8)` | `C:\dev\vte\src\lib.rs:768` | C0/C1 controls: LF, CR, BS, BEL, tab, charset shifts. |
@@ -186,21 +186,21 @@ starts at `C:\dev\vte\src\lib.rs:763`.
 | `esc_dispatch(...)` | `C:\dev\vte\src\lib.rs:814` | ESC final actions and charsets. |
 | `terminated()` | `C:\dev\vte\src\lib.rs:825` | Stop parsing when the semantic layer needs to flush or buffer. |
 
-Kepler design:
+Hera design:
 
 ```rust
-struct KeplerPerformer<'a> {
+struct HeraPerformer<'a> {
     terminal: &'a mut TerminalCore,
     actions: &'a mut Vec<TerminalAction>,
 }
 
-impl vte::Perform for KeplerPerformer<'_> {
+impl vte::Perform for HeraPerformer<'_> {
     // Internal adapter only. Do not expose this trait publicly.
 }
 ```
 
 For M1, direct mutation inside `terminal-core` is probably simpler than
-allocating a `Vec<TerminalAction>` for every chunk. Still define a Kepler-owned
+allocating a `Vec<TerminalAction>` for every chunk. Still define a Hera-owned
 action vocabulary for tests and embedding, even if the fast path applies it
 directly.
 
@@ -219,7 +219,7 @@ This is critical for modern SGR colors, where colon-separated forms must be
 preserved. The changelog explicitly added CSI subparameter support in 0.9.0
 (`C:\dev\vte\CHANGELOG.md:61`).
 
-Kepler implication: the normalized action layer must not flatten params too
+Hera implication: the normalized action layer must not flatten params too
 early. Preserve `[u16]` slices until the semantic handler knows the final
 character.
 
@@ -233,14 +233,14 @@ terminator through `bell_terminated` (`C:\dev\vte\src\lib.rs:589`).
 
 Limits and policy:
 
-| Concern | Source | Kepler decision |
+| Concern | Source | Hera decision |
 |---|---|---|
 | Max OSC params | `C:\dev\vte\src\lib.rs:47`, `C:\dev\vte\src\lib.rs:531` | Accept parser limit, log ignored overflow in debug builds. |
-| no-std raw size | `C:\dev\vte\src\lib.rs:48`, `C:\dev\vte\src\lib.rs:63` | Not relevant for desktop M1 unless Kepler targets no-std later. |
-| std raw storage | `C:\dev\vte\src\lib.rs:65` | Add Kepler-level abuse limits for clipboard/title payloads. |
+| no-std raw size | `C:\dev\vte\src\lib.rs:48`, `C:\dev\vte\src\lib.rs:63` | Not relevant for desktop M1 unless Hera targets no-std later. |
+| std raw storage | `C:\dev\vte\src\lib.rs:65` | Add Hera-level abuse limits for clipboard/title payloads. |
 | BEL vs ST | `C:\dev\vte\src\lib.rs:412`, `C:\dev\vte\src\lib.rs:419` | Preserve terminator info for compatibility tests. |
 
-Security implication: parser acceptance is not semantic acceptance. Kepler must
+Security implication: parser acceptance is not semantic acceptance. Hera must
 decide OSC 52 clipboard policy, hyperlinks, title changes and unsupported OSCs
 at the semantic layer.
 
@@ -261,7 +261,7 @@ synchronized update sequences around DEC private mode 2026
 (`C:\dev\vte\src\ansi.rs:353`, `C:\dev\vte\src\ansi.rs:370`,
 `C:\dev\vte\src\ansi.rs:390`, `C:\dev\vte\src\ansi.rs:411`).
 
-Kepler implication: synchronized update is worth supporting early because it
+Hera implication: synchronized update is worth supporting early because it
 affects perceived rendering quality. The parser can help stop mid-chunk, but
 the render scheduler must own the actual flush policy.
 
@@ -282,19 +282,19 @@ unhandled, and OSC/CSI receive detailed semantic handling
 `C:\dev\vte\src\ansi.rs:1296`, `C:\dev\vte\src\ansi.rs:1311`,
 `C:\dev\vte\src\ansi.rs:1329`, `C:\dev\vte\src\ansi.rs:1529`).
 
-Kepler should treat this as a reference implementation for action mapping, not
+Hera should treat this as a reference implementation for action mapping, not
 as an API to expose. Reasons:
 
 1. Handler defaults can hide unsupported behavior.
-2. Kepler needs explicit unsupported-sequence telemetry.
+2. Hera needs explicit unsupported-sequence telemetry.
 3. Some actions should become render damage, mode changes or host callbacks.
-4. Public embedding should depend on Kepler concepts, not `vte::ansi` concepts.
+4. Public embedding should depend on Hera concepts, not `vte::ansi` concepts.
 
 ## Modes, Keyboard And Colors
 
 The `ansi` module has useful modern protocol coverage:
 
-| Surface | Source | Kepler relevance |
+| Surface | Source | Hera relevance |
 |---|---|---|
 | Kitty keyboard protocol docs | `C:\dev\vte\src\ansi.rs:739` | Model for progressive keyboard enhancement. |
 | XTerm modifyOtherKeys | `C:\dev\vte\src\ansi.rs:777` | Required for advanced shortcut fidelity. |
@@ -304,23 +304,23 @@ The `ansi` module has useful modern protocol coverage:
 | SGR color parsing | `C:\dev\vte\src\ansi.rs:1930` | Truecolor and indexed color parsing reference. |
 | Named colors | `C:\dev\vte\src\ansi.rs:1007` | Palette interface reference. |
 
-Kepler implication: these mappings should inform `terminal-protocol`, but the
-final enums should be Kepler-owned. This keeps space for Ghostty-style render
+Hera implication: these mappings should inform `terminal-protocol`, but the
+final enums should be Hera-owned. This keeps space for Ghostty-style render
 state, Alacritty-style grid state and future host APIs.
 
 ## Tests And Fixtures
 
-The parser tests are directly useful because they target edge cases Kepler will
+The parser tests are directly useful because they target edge cases Hera will
 otherwise rediscover late:
 
-| Test area | Source | Why Kepler should care |
+| Test area | Source | Why Hera should care |
 |---|---|---|
 | OSC parsing and BEL/ST termination | `C:\dev\vte\src\lib.rs:905`, `C:\dev\vte\src\lib.rs:956`, `C:\dev\vte\src\lib.rs:971` | Titles, color changes, clipboard and shell integration depend on OSC correctness. |
 | OSC UTF-8 and string terminators | `C:\dev\vte\src\lib.rs:986`, `C:\dev\vte\src\lib.rs:1004` | Prevent split/terminator bugs in non-ASCII titles. |
 | CSI max params and ignored long params | `C:\dev\vte\src\lib.rs:1055`, `C:\dev\vte\src\lib.rs:1078` | Defines overflow behavior. |
 | CSI leading/trailing semicolons | `C:\dev\vte\src\lib.rs:1101`, `C:\dev\vte\src\lib.rs:1115` | Common compatibility footgun. |
 | DCS parsing | `C:\dev\vte\src\lib.rs:1184`, `C:\dev\vte\src\lib.rs:1225` | Needed before Sixel or richer DCS support. |
-| Fixed OSC buffer no-std cases | `C:\dev\vte\src\lib.rs:1335` | Useful if Kepler ever targets constrained environments. |
+| Fixed OSC buffer no-std cases | `C:\dev\vte\src\lib.rs:1335` | Useful if Hera ever targets constrained environments. |
 | Invalid and partial UTF-8 | `C:\dev\vte\src\lib.rs:1410`, `C:\dev\vte\src\lib.rs:1425`, `C:\dev\vte\src\lib.rs:1493` | PTY chunks can split anywhere. |
 | Execute anywhere | `C:\dev\vte\src\lib.rs:1532` | Parser must handle control bytes outside happy paths. |
 
@@ -332,8 +332,8 @@ startup, OSC 4/104 color updates and synchronized updates
 `C:\dev\vte\src\ansi.rs:2321`, `C:\dev\vte\src\ansi.rs:2366`,
 `C:\dev\vte\src\ansi.rs:2398`, `C:\dev\vte\src\ansi.rs:2417`).
 
-Kepler implication: import the ideas, not necessarily the literal fixture
-layout. The first Kepler parser test set should include split UTF-8, SGR
+Hera implication: import the ideas, not necessarily the literal fixture
+layout. The first Hera parser test set should include split UTF-8, SGR
 subparameters, OSC BEL/ST, DEC private modes, alternate screen and sync update.
 
 ## Example Harness
@@ -345,11 +345,11 @@ subparameters, OSC BEL/ST, DEC private modes, alternate screen and sync update.
 (`C:\dev\vte\examples\parselog.rs:59`, `C:\dev\vte\examples\parselog.rs:62`)
 and calls `advance` on each chunk (`C:\dev\vte\examples\parselog.rs:64`).
 
-Kepler implication: build a similar `kepler-parse-log` dev binary early. It
-should print Kepler-owned actions, not raw `vte::Perform` callbacks, so fixture
+Hera implication: build a similar `hera-parse-log` dev binary early. It
+should print Hera-owned actions, not raw `vte::Perform` callbacks, so fixture
 diffs validate the adapter layer.
 
-## What Kepler Should Copy
+## What Hera Should Copy
 
 Copy these ideas:
 
@@ -363,11 +363,11 @@ Copy these ideas:
 8. Synchronized update termination path.
 9. Edge-case parser tests before UI work.
 
-## What Kepler Should Avoid
+## What Hera Should Avoid
 
 Avoid these traps:
 
-1. Exposing `vte::Perform`, `vte::Params` or `vte::ansi::Handler` as Kepler's
+1. Exposing `vte::Perform`, `vte::Params` or `vte::ansi::Handler` as Hera's
    public API.
 2. Treating `ansi::Processor` as a complete terminal emulator.
 3. Letting Handler default no-ops hide unsupported sequences.
@@ -376,7 +376,7 @@ Avoid these traps:
 6. Accepting every OSC semantically just because the parser can parse it.
 7. Deferring sync update support until after renderer architecture hardens.
 
-## Recommended Kepler Shape
+## Recommended Hera Shape
 
 M1 structure:
 
@@ -409,30 +409,30 @@ Flow:
 ```text
 PTY bytes
   -> vte::Parser
-  -> private KeplerPerformer
+  -> private HeraPerformer
   -> TerminalAction or direct TerminalCore mutation
   -> damage/render snapshot
 ```
 
 Decision: for performance and simplicity, M1 can mutate `TerminalCore` directly
-inside `KeplerPerformer`, while tests expose a parallel action recorder. This
+inside `HeraPerformer`, while tests expose a parallel action recorder. This
 keeps the public API clean without forcing allocations into the hot path.
 
-## Open Questions For Kepler
+## Open Questions For Hera
 
 1. Should `terminal-protocol` expose an action recorder in public API, or keep
    it test-only until embedding use cases demand it?
 2. Should OSC 52 clipboard be disabled by default, prompt-gated or host-gated?
 3. Should synchronized update buffering live in parser adapter or render
    scheduler? Prefer scheduler ownership with parser termination support.
-4. Should Kepler enable `vte`'s `ansi` feature, or implement its own semantic
+4. Should Hera enable `vte`'s `ansi` feature, or implement its own semantic
    mapping from raw `Perform` callbacks? Prefer raw `Perform` for control, with
    `ansi.rs` as reference material.
 
 ## Bottom Line
 
 Use `alacritty-vte` as the Rust parser backbone or exact boundary model. Do not
-turn it into Kepler's public protocol. The parser gives Kepler the hard part of
-VT byte classification; Kepler's product value starts immediately after that:
+turn it into Hera's public protocol. The parser gives Hera the hard part of
+VT byte classification; Hera's product value starts immediately after that:
 state correctness, damage, render snapshots, embeddability, PTY ergonomics and
 cross-platform host integration.

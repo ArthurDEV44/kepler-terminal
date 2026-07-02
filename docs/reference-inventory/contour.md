@@ -3,7 +3,7 @@
 Status: initial focused pass
 Date: 2026-07-01
 Reference source: `C:\dev\contour`
-Scope: Contour lessons for Kepler, especially C++23 module separation,
+Scope: Contour lessons for Hera, especially C++23 module separation,
 cross-platform PTY handling, parser/backend boundaries, grid reflow, Sixel and
 image protocols, OSC 133 shell integration, semantic block query, buffer
 capture, keyboard encoding and renderer isolation.
@@ -11,19 +11,19 @@ capture, keyboard encoding and renderer isolation.
 ## Executive Takeaways
 
 Contour is a high-value protocol and fixture reference, not a stack template
-for Kepler.
+for Hera.
 
 The high-value lessons:
 
 1. Contour validates a layered terminal split: `vtparser`, `vtbackend`,
    `vtpty`, `vtrasterizer`, `text_shaper` and the Qt app are separate CMake
    modules.
-2. The parser is a clean event source, but Kepler should still wrap
+2. The parser is a clean event source, but Hera should still wrap
    `alacritty/vte` first. Contour is useful for parser fixture ideas,
    especially PM/APC/OSC/DCS and bulk UTF-8 handling.
 3. The backend is the important part: `Terminal` owns parser, PTY, screens,
    render double buffer, semantic tracker, input generator and image pool.
-   Kepler should copy the boundary ideas, not the broad object size.
+   Hera should copy the boundary ideas, not the broad object size.
 4. Contour gives excellent evidence for text reflow as a first-class mode.
    It documents DEC private mode 2028 and implements reflow inside grid resize
    with LineSoA-backed lines.
@@ -32,13 +32,13 @@ The high-value lessons:
 6. Contour is one of the best references for the semantic session layer:
    OSC 133, a semantic block tracker, a discoverable DEC mode 2034 and DCS JSON
    replies.
-7. Sixel, Good Image Protocol and buffer capture should stay out of Kepler M1
+7. Sixel, Good Image Protocol and buffer capture should stay out of Hera M1
    rendering, but their metadata and payload boundaries should shape the future
    protocol model.
-8. The renderer and font stack confirm Kepler's adapter rule. DirectWrite,
+8. The renderer and font stack confirm Hera's adapter rule. DirectWrite,
    CoreText, fontconfig, Freetype, Harfbuzz, OpenGL and Qt belong outside the
    headless core.
-9. Contour's C++23/Qt/CMake/vcpkg stack is not a reason to add C++ to Kepler.
+9. Contour's C++23/Qt/CMake/vcpkg stack is not a reason to add C++ to Hera.
    It reinforces a Rust-first core with narrow platform adapters.
 
 Confidence: high for build, module, parser, backend, PTY, reflow, semantic
@@ -58,7 +58,7 @@ narrows that to Linux, macOS, FreeBSD and Windows
 cross-platform design, but not as a promise that every implementation detail is
 portable in the same way.
 
-The most important Contour value for Kepler is not its GUI. The reusable asset
+The most important Contour value for Hera is not its GUI. The reusable asset
 is the combination of:
 
 - C++23 terminal modules with explicit parser, backend, PTY and rasterizer
@@ -75,12 +75,12 @@ is the combination of:
   `C:\dev\contour\src\vtpty\UnixPty.h:26`,
   `C:\dev\contour\src\vtpty\SshSession.h:105`).
 
-Kepler implication: Contour is a protocol and fixture mine. It should influence
-Kepler's boundaries, tests and backlog, but not Kepler's language stack.
+Hera implication: Contour is a protocol and fixture mine. It should influence
+Hera's boundaries, tests and backlog, but not Hera's language stack.
 
 ## Codebase Map
 
-| Area | Local path | What it contains | Kepler relevance |
+| Area | Local path | What it contains | Hera relevance |
 |---|---|---|---|
 | VT parser | `C:\dev\contour\src\vtparser` | Parser state machine, event interface, parser extension hooks, parser tests. | Secondary parser behavior reference after `alacritty/vte`. |
 | Backend core | `C:\dev\contour\src\vtbackend` | Terminal, Screen, Grid, LineSoA, render buffers, input generator, semantic tracker, image protocols. | Strong terminal semantics and fixture reference. |
@@ -90,11 +90,11 @@ Kepler's boundaries, tests and backlog, but not Kepler's language stack.
 | GUI app | `C:\dev\contour\src\contour` | Qt/QML app, config, OpenGL renderer integration, terminal session orchestration. | Host app reference only. |
 | VT extension docs | `C:\dev\contour\docs\vt-extensions` | Synchronized output, reflow, OSC 133, semantic block query, buffer capture, CSI u. | High-value protocol backlog and docs source. |
 | Tests | `C:\dev\contour\src\*_test.cpp` | Parser, grid, backend, Sixel, Good Image Protocol, renderer and input tests. | Strong fixture inspiration. |
-| Build | `C:\dev\contour\CMakeLists.txt`, `vcpkg.json` | C++23, CMake modules, Qt, Catch2, libssh2, font libs and platform switches. | Reinforces Rust/Cargo simplicity for Kepler. |
+| Build | `C:\dev\contour\CMakeLists.txt`, `vcpkg.json` | C++23, CMake modules, Qt, Catch2, libssh2, font libs and platform switches. | Reinforces Rust/Cargo simplicity for Hera. |
 
 ## Language And Platform Decision
 
-Contour reinforces the existing Kepler decision: keep the owned implementation
+Contour reinforces the existing Hera decision: keep the owned implementation
 Rust-first. Contour is written as a C++23 project with CMake and C sources
 enabled (`C:\dev\contour\CMakeLists.txt:8`,
 `C:\dev\contour\CMakeLists.txt:12`,
@@ -102,9 +102,9 @@ enabled (`C:\dev\contour\CMakeLists.txt:8`,
 `C:\dev\contour\CMakeLists.txt:15`). That is coherent for Contour, but it is
 not the right default for a new headless Rust terminal engine.
 
-| Kepler zone | Language | Contour evidence | Decision |
+| Hera zone | Language | Contour evidence | Decision |
 |---|---|---|---|
-| Terminal state core | Rust | Contour's backend is a static C++ library linked to parser and PTY modules (`C:\dev\contour\src\vtbackend\CMakeLists.txt:93`, `C:\dev\contour\src\vtbackend\CMakeLists.txt:108`). | Keep Kepler core Rust-only. |
+| Terminal state core | Rust | Contour's backend is a static C++ library linked to parser and PTY modules (`C:\dev\contour\src\vtbackend\CMakeLists.txt:93`, `C:\dev\contour\src\vtbackend\CMakeLists.txt:108`). | Keep Hera core Rust-only. |
 | VT parser | Rust wrapper | Contour has a custom parser event interface and parser table (`C:\dev\contour\src\vtparser\ParserEvents.h:15`, `C:\dev\contour\src\vtparser\Parser-impl.h:25`). | Wrap `alacritty/vte`; use Contour for tests. |
 | Grid and reflow | Rust | Contour models reflow with `Grid`, `Line` and `LineSoA` (`C:\dev\contour\src\vtbackend\Grid.h:546`, `C:\dev\contour\src\vtbackend\Line.h:57`). | Implement in Rust with fixture parity. |
 | Semantic layer | Rust | OSC 133 and DEC mode 2034 are backend concepts (`C:\dev\contour\src\vtbackend\SemanticBlockTracker.h:30`, `C:\dev\contour\docs\vt-extensions\semantic-block-query.md:18`). | Rust observer sidecar. |
@@ -112,10 +112,10 @@ not the right default for a new headless Rust terminal engine.
 | Windows ConPTY | Rust plus Win32 FFI | Contour loads or calls ConPTY APIs (`C:\dev\contour\src\vtpty\ConPty.cpp:17`, `C:\dev\contour\src\vtpty\ConPty.cpp:98`). | Use `windows-rs`, not C# or C++. |
 | Unix PTY | Rust plus Unix syscalls | Contour uses `openpty`, `winsize`, read/write and resize (`C:\dev\contour\src\vtpty\UnixPty.cpp:67`, `C:\dev\contour\src\vtpty\UnixPty.cpp:87`, `C:\dev\contour\src\vtpty\UnixPty.cpp:367`). | Use `rustix`, `libc` or `nix`. |
 | Renderer and fonts | Rust adapter later | Contour uses DirectWrite, CoreText, fontconfig, Freetype and Harfbuzz (`C:\dev\contour\src\text_shaper\CMakeLists.txt:11`, `C:\dev\contour\src\text_shaper\CMakeLists.txt:16`, `C:\dev\contour\src\text_shaper\CMakeLists.txt:19`, `C:\dev\contour\src\text_shaper\CMakeLists.txt:37`). | Keep outside `terminal-core`. |
-| GUI host | Rust app adapter | Contour uses Qt6 for the GUI path (`C:\dev\contour\CMakeLists.txt:179`). | Kepler exports a Rust render model for GPUI or future hosts. |
+| GUI host | Rust app adapter | Contour uses Qt6 for the GUI path (`C:\dev\contour\CMakeLists.txt:179`). | Hera exports a Rust render model for GPUI or future hosts. |
 
 Bottom line: Contour's value is its terminal maturity, not its language mix.
-Kepler should mine its protocols and tests while keeping a simpler Rust public
+Hera should mine its protocols and tests while keeping a simpler Rust public
 surface.
 
 ## Build And Platform Shape
@@ -143,13 +143,13 @@ an external `conpty.dll` workaround for Windows 10 mouse limitations
 `C:\dev\contour\src\vtpty\CMakeLists.txt:97`,
 `C:\dev\contour\src\vtpty\CMakeLists.txt:121`).
 
-Kepler implication: define platform policy by target triple and adapter crate,
+Hera implication: define platform policy by target triple and adapter crate,
 not by adding C++/C# just because Windows is hard. The hard part is isolating
 the behavior, not changing the core language.
 
 ## Parser Boundary
 
-Contour's parser exposes the exact kind of event interface Kepler needs behind
+Contour's parser exposes the exact kind of event interface Hera needs behind
 its parser adapter. `ParserEvents` separates printable text, C0 execution, ESC,
 CSI, OSC, DCS hook/unhook and APC events
 (`C:\dev\contour\src\vtparser\ParserEvents.h:31`,
@@ -183,8 +183,8 @@ text while in Ground state (`C:\dev\contour\src\vtparser\Parser.h:500`,
 `C:\dev\contour\src\vtparser\Parser-impl.h:451`,
 `C:\dev\contour\src\vtparser\Parser-impl.h:477`).
 
-Kepler implication: keep `alacritty/vte` as the first parser dependency, but
-design Kepler's internal `TerminalAction` layer to be parser-agnostic. Contour
+Hera implication: keep `alacritty/vte` as the first parser dependency, but
+design Hera's internal `TerminalAction` layer to be parser-agnostic. Contour
 is useful for testing PM/APC coverage and split UTF-8 bulk text cases
 (`C:\dev\contour\src\vtparser\Parser_test.cpp:46`,
 `C:\dev\contour\src\vtparser\Parser_test.cpp:58`,
@@ -236,7 +236,7 @@ fills the back buffer and swaps it on demand
 `C:\dev\contour\src\vtbackend\Terminal.cpp:504`,
 `C:\dev\contour\src\vtbackend\Terminal.cpp:510`).
 
-Kepler implication: copy the pull/snapshot idea, not the exact class. Kepler's
+Hera implication: copy the pull/snapshot idea, not the exact class. Hera's
 core should expose render frames and damage without owning the renderer or PTY.
 
 ## Grid, Scrollback, Resize And Reflow
@@ -283,7 +283,7 @@ handler propagates TextReflow into screen/grid behavior
 `C:\dev\contour\src\vtbackend\Terminal.cpp:2734`,
 `C:\dev\contour\src\vtbackend\Terminal.cpp:2805`).
 
-Kepler implication: reflow must be fixture-first. Contour's grid tests provide
+Hera implication: reflow must be fixture-first. Contour's grid tests provide
 direct cases for resize, history movement, shrink/grow and reflow
 (`C:\dev\contour\src\vtbackend\Grid_test.cpp:325`,
 `C:\dev\contour\src\vtbackend\Grid_test.cpp:400`,
@@ -294,7 +294,7 @@ direct cases for resize, history movement, shrink/grow and reflow
 
 ## PTY And Process Lifecycle
 
-Contour's PTY abstraction is close to the shape Kepler needs. `Pty` exposes
+Contour's PTY abstraction is close to the shape Hera needs. `Pty` exposes
 read, wakeup, write, page size and resize operations
 (`C:\dev\contour\src\vtpty\Pty.h:52`,
 `C:\dev\contour\src\vtpty\Pty.h:55`,
@@ -335,7 +335,7 @@ attaches the process to the PTY (`C:\dev\contour\src\vtpty\Process_unix.cpp:150`
 `C:\dev\contour\src\vtpty\Process_unix.cpp:154`,
 `C:\dev\contour\src\vtpty\Process_unix.cpp:157`).
 
-Kepler implication: keep PTY outside `terminal-core`, but build it as a real
+Hera implication: keep PTY outside `terminal-core`, but build it as a real
 portable crate. Contour supports the same direction as WezTerm's
 `portable-pty`: trait first, OS quirks isolated.
 
@@ -356,7 +356,7 @@ backend interface mirrors those concepts (`C:\dev\contour\src\vtbackend\ShellInt
 `C:\dev\contour\src\vtbackend\ShellIntegration.h:32`,
 `C:\dev\contour\src\vtbackend\ShellIntegration.h:41`).
 
-The semantic block query protocol is even more relevant to Kepler. It provides
+The semantic block query protocol is even more relevant to Hera. It provides
 a machine-readable query mechanism returning JSON blocks of command data and
 requires OSC 133 shell integration
 (`C:\dev\contour\docs\vt-extensions\semantic-block-query.md:3`,
@@ -389,7 +389,7 @@ prompt/output/command boundaries and can reply with JSON blocks
 `C:\dev\contour\src\vtbackend\Screen.cpp:4111`,
 `C:\dev\contour\src\vtbackend\Screen.cpp:4121`).
 
-Kepler implication: the semantic layer should be a Rust observer sidecar with
+Hera implication: the semantic layer should be a Rust observer sidecar with
 stable row handles and session tokens. It must never corrupt terminal state if
 OSC 133 is absent, malformed or disabled.
 
@@ -451,7 +451,7 @@ UTF-8 chunks (`C:\dev\contour\docs\vt-extensions\buffer-capture.md:3`,
 `C:\dev\contour\src\vtbackend\Screen.cpp:2013`,
 `C:\dev\contour\src\vtbackend\Screen.cpp:2041`).
 
-Kepler implication: M1 should parse, cap and preserve unknown image/protocol
+Hera implication: M1 should parse, cap and preserve unknown image/protocol
 payload metadata, but not implement image rendering. Buffer capture is more
 relevant earlier because it aligns with agent-visible terminal state.
 
@@ -480,7 +480,7 @@ legacy vs non-legacy modes, mouse protocols and Win32 input mode
 `C:\dev\contour\src\vtbackend\InputGenerator.h:509`,
 `C:\dev\contour\src\vtbackend\InputGenerator.h:517`).
 
-Kepler implication: keyboard encoding belongs in a separate Rust helper crate
+Hera implication: keyboard encoding belongs in a separate Rust helper crate
 or module outside the headless state core. The terminal core should model mode
 state and expose enough configuration for the input encoder.
 
@@ -513,7 +513,7 @@ DirectWrite, CoreText and OpenShaper options
 `C:\dev\contour\src\vtrasterizer\FontDescriptions.h:177`,
 `C:\dev\contour\src\vtrasterizer\FontDescriptions.h:178`).
 
-Kepler implication: keep `terminal-render-model` platform-neutral. Font
+Hera implication: keep `terminal-render-model` platform-neutral. Font
 resolution, glyph shaping, texture atlases and OpenGL/GPUI resources belong in
 host adapters.
 
@@ -548,11 +548,11 @@ Contour has a large Catch2 surface. Useful fixture zones:
   `C:\dev\contour\src\vtbackend\Functions_test.cpp:84`,
   `C:\dev\contour\src\vtbackend\Functions.h:662`).
 
-Kepler implication: extract fixture ideas before implementing clever behavior.
-Contour is especially useful after M1, when Kepler has a stable snapshot format
+Hera implication: extract fixture ideas before implementing clever behavior.
+Contour is especially useful after M1, when Hera has a stable snapshot format
 and can compare reflow, Sixel metadata, semantic blocks and capture output.
 
-## What Kepler Should Copy
+## What Hera Should Copy
 
 Copy these ideas:
 
@@ -561,7 +561,7 @@ Copy these ideas:
 2. PTY trait surface: read, wakeup, write, size and resize, with platform
    runtime selection outside core.
 3. Explicit reflow mode and wrap metadata. Mode 2028 is a useful compatibility
-   clue even if Kepler does not expose that exact extension in M1.
+   clue even if Hera does not expose that exact extension in M1.
 4. Semantic session observer: OSC 133 events, completed blocks, current block,
    tokened query and JSON-ish external shape.
 5. Buffer capture as a product-relevant terminal operation.
@@ -569,12 +569,12 @@ Copy these ideas:
 7. Fixture categories: PM/APC parser, split UTF-8, reflow, Sixel, image layers,
    keyboard protocol modes and renderer geometry changes.
 
-## What Kepler Should Avoid
+## What Hera Should Avoid
 
 Avoid these choices:
 
-1. Do not import C++ into Kepler core. Contour's C++23 architecture is mature,
-   but Kepler's leverage is a Rust-first public API.
+1. Do not import C++ into Hera core. Contour's C++23 architecture is mature,
+   but Hera's leverage is a Rust-first public API.
 2. Do not let terminal state own GUI, OpenGL, Qt, DirectWrite, CoreText or
    fontconfig types.
 3. Do not merge parser callbacks, screen mutation, image pool, semantic tracker,
@@ -586,7 +586,7 @@ Avoid these choices:
 6. Do not treat ConPTY as a source of terminal truth. It is a stream transport
    with platform-specific lifecycle and resize quirks.
 
-## Recommended Kepler Shape
+## Recommended Hera Shape
 
 Contour supports this shape:
 
@@ -603,5 +603,5 @@ Contour supports this shape:
 
 Final decision: Contour is a major reference for compatibility depth and
 agent-friendly terminal semantics. It does not change the language plan.
-Kepler remains Rust-first, with Contour used as a protocol, fixture and adapter
+Hera remains Rust-first, with Contour used as a protocol, fixture and adapter
 boundary reference.
