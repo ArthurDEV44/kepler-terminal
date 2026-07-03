@@ -1,0 +1,257 @@
+{
+  "fixtures": [
+    {
+      "name": "plain-text",
+      "terminal": { "columns": 5, "rows": 2 },
+      "chunks": [{ "bytes": [104, 101, 108, 108, 111] }],
+      "expected": {
+        "columns": 5,
+        "rows": 2,
+        "active_screen": "primary",
+        "cursor": { "row": 0, "column": 4, "visible": true },
+        "viewport_lines": ["hello", ""]
+      }
+    },
+    {
+      "name": "controls-cr-lf-bs-tab",
+      "terminal": { "columns": 8, "rows": 2 },
+      "chunks": [{ "bytes": [97, 98, 8, 99, 13, 122, 9, 113, 10, 120] }],
+      "expected": {
+        "cursor": { "row": 1, "column": 7, "visible": true },
+        "viewport_lines": ["zc     q", "       x"]
+      }
+    },
+    {
+      "name": "sgr-reset",
+      "terminal": { "columns": 2, "rows": 1 },
+      "chunks": [{ "bytes": [27, 91, 51, 56, 58, 50, 58, 49, 58, 50, 58, 51, 109, 82, 27, 91, 48, 109, 68] }],
+      "expected": {
+        "cursor": { "row": 0, "column": 1, "visible": true },
+        "viewport_lines": ["RD"],
+        "cell_styles": [
+          { "row": 0, "column": 0, "foreground": { "rgb": { "red": 1, "green": 2, "blue": 3 } } },
+          { "row": 0, "column": 1, "default": true }
+        ],
+        "events": [
+          { "kind": "csi", "diagnostic_contains": "38:2:1:2:3m" },
+          { "kind": "csi", "diagnostic_contains": "CSI 0m" }
+        ]
+      }
+    },
+    {
+      "name": "sgr-truecolor",
+      "terminal": { "columns": 3, "rows": 1 },
+      "chunks": [{ "bytes": [27, 91, 51, 56, 58, 50, 58, 49, 58, 50, 58, 51, 109, 82] }],
+      "expected": {
+        "cursor": { "row": 0, "column": 1, "visible": true },
+        "viewport_lines": ["R"],
+        "cell_styles": [
+          { "row": 0, "column": 0, "foreground": { "rgb": { "red": 1, "green": 2, "blue": 3 } } }
+        ],
+        "events": [{ "kind": "csi", "diagnostic_contains": "38:2:1:2:3m" }]
+      }
+    },
+    {
+      "name": "line-wrap",
+      "terminal": { "columns": 3, "rows": 2 },
+      "chunks": [{ "bytes": [97, 98, 99, 100] }],
+      "expected": {
+        "cursor": { "row": 1, "column": 1, "visible": true },
+        "viewport_lines": ["abc", "d"],
+        "wrapped_viewport_rows": [0]
+      }
+    },
+    {
+      "name": "scrollback-trim",
+      "terminal": {
+        "columns": 2,
+        "rows": 1,
+        "scrollback": { "max_lines": 1, "max_bytes": 4096 }
+      },
+      "chunks": [{ "bytes": [97, 13, 10, 98, 13, 10, 99] }],
+      "expected": {
+        "cursor": { "row": 0, "column": 1, "visible": true },
+        "viewport_lines": ["c"],
+        "scrollback_lines": ["b"]
+      }
+    },
+    {
+      "name": "split-utf8",
+      "terminal": { "columns": 2, "rows": 1 },
+      "split_every_boundary": true,
+      "chunks": [{ "bytes": [195, 169] }],
+      "expected": {
+        "cursor": { "row": 0, "column": 1, "visible": true },
+        "viewport_lines": ["\u00e9"]
+      }
+    },
+    {
+      "name": "malformed-utf8",
+      "terminal": { "columns": 4, "rows": 1 },
+      "chunks": [{ "bytes": [240, 40, 140, 40] }],
+      "expected": {
+        "cursor": { "row": 0, "column": 3, "visible": true },
+        "viewport_lines": ["\ufffd(("]
+      }
+    },
+    {
+      "name": "unknown-osc-oversized",
+      "terminal": { "columns": 2, "rows": 1 },
+      "chunks": [
+        { "bytes": [27, 93, 57, 57, 57, 59] },
+        { "repeat": { "byte": 120, "count": 4101 } },
+        { "bytes": [27, 92] }
+      ],
+      "expected": {
+        "cursor": { "row": 0, "column": 0, "visible": true },
+        "viewport_lines": [""],
+        "events": [
+          { "kind": "payload_limit_exceeded", "diagnostic_contains": "OSC payload limit exceeded" }
+        ]
+      }
+    },
+    {
+      "name": "osc8-placeholder",
+      "terminal": { "columns": 4, "rows": 1 },
+      "chunks": [
+        { "bytes": [27, 93, 56, 59, 59, 104, 116, 116, 112, 115, 58, 47, 47, 101, 120, 97, 109, 112, 108, 101, 46, 99, 111, 109, 27, 92] },
+        { "bytes": [108, 105, 110, 107] },
+        { "bytes": [27, 93, 56, 59, 59, 27, 92] }
+      ],
+      "expected": {
+        "cursor": { "row": 0, "column": 3, "visible": true },
+        "viewport_lines": ["link"],
+        "events": [
+          { "kind": "osc", "diagnostic_contains": "8;;https://example.com" }
+        ]
+      }
+    },
+    {
+      "name": "bracketed-paste-mode",
+      "terminal": { "columns": 4, "rows": 1 },
+      "chunks": [
+        { "bytes": [27, 91, 63, 50, 48, 48, 52, 104] },
+        { "bytes": [36] },
+        { "bytes": [27, 91, 63, 50, 48, 48, 52, 108] }
+      ],
+      "checkpoints": [
+        {
+          "after_chunk": 1,
+          "expected": { "modes": { "bracketed_paste": true } }
+        }
+      ],
+      "expected": {
+        "modes": { "bracketed_paste": false },
+        "cursor": { "row": 0, "column": 1, "visible": true },
+        "viewport_lines": ["$"],
+        "events": [
+          { "kind": "csi", "diagnostic_contains": "2004h" },
+          { "kind": "csi", "diagnostic_contains": "2004l" }
+        ]
+      }
+    },
+    {
+      "name": "alternate-screen-1049",
+      "terminal": { "columns": 3, "rows": 2 },
+      "chunks": [
+        { "bytes": [112] },
+        { "bytes": [27, 91, 63, 49, 48, 52, 57, 104] },
+        { "bytes": [97] },
+        { "bytes": [27, 91, 63, 49, 48, 52, 57, 108] }
+      ],
+      "checkpoints": [
+        {
+          "after_chunk": 3,
+          "expected": {
+            "active_screen": "alternate",
+            "cursor": { "row": 0, "column": 1, "visible": true },
+            "viewport_lines": ["a", ""]
+          }
+        }
+      ],
+      "expected": {
+        "active_screen": "primary",
+        "cursor": { "row": 0, "column": 1, "visible": true },
+        "viewport_lines": ["p", ""],
+        "events": [
+          { "kind": "csi", "diagnostic_contains": "1049h" },
+          { "kind": "csi", "diagnostic_contains": "1049l" }
+        ]
+      }
+    },
+    {
+      "name": "resize-primary-wrap-narrow-wide",
+      "terminal": { "columns": 4, "rows": 2 },
+      "chunks": [
+        { "bytes": [97, 98, 99, 100, 101, 102] },
+        { "resize": { "columns": 3, "rows": 2 } },
+        { "resize": { "columns": 6, "rows": 2 } }
+      ],
+      "checkpoints": [
+        {
+          "after_chunk": 2,
+          "expected": {
+            "columns": 3,
+            "rows": 2,
+            "cursor": { "row": 1, "column": 2, "visible": true },
+            "viewport_lines": ["abc", "def"],
+            "wrapped_viewport_rows": [0]
+          }
+        }
+      ],
+      "expected": {
+        "columns": 6,
+        "rows": 2,
+        "cursor": { "row": 0, "column": 5, "visible": true },
+        "viewport_lines": ["abcdef", ""]
+      }
+    },
+    {
+      "name": "resize-primary-height-shrink-keeps-cursor-row",
+      "terminal": { "columns": 3, "rows": 4 },
+      "chunks": [
+        { "bytes": [97, 98] },
+        { "resize": { "columns": 3, "rows": 1 } }
+      ],
+      "expected": {
+        "columns": 3,
+        "rows": 1,
+        "cursor": { "row": 0, "column": 2, "visible": true },
+        "viewport_lines": ["ab"],
+        "scrollback_lines": []
+      }
+    },
+    {
+      "name": "resize-alternate-keeps-primary-scrollback",
+      "terminal": { "columns": 2, "rows": 1 },
+      "chunks": [
+        { "bytes": [97, 13, 10, 98] },
+        { "bytes": [27, 91, 63, 49, 48, 52, 57, 104] },
+        { "bytes": [120] },
+        { "resize": { "columns": 4, "rows": 2 } },
+        { "bytes": [27, 91, 63, 49, 48, 52, 57, 108] }
+      ],
+      "checkpoints": [
+        {
+          "after_chunk": 4,
+          "expected": {
+            "columns": 4,
+            "rows": 2,
+            "active_screen": "alternate",
+            "cursor": { "row": 0, "column": 1, "visible": true },
+            "viewport_lines": ["x", ""],
+            "scrollback_lines": []
+          }
+        }
+      ],
+      "expected": {
+        "columns": 4,
+        "rows": 2,
+        "active_screen": "primary",
+        "cursor": { "row": 0, "column": 1, "visible": true },
+        "viewport_lines": ["b", ""],
+        "scrollback_lines": ["a"]
+      }
+    }
+  ]
+}

@@ -31,16 +31,17 @@ Paneflow est le premier terrain naturel de dogfood.
 
 Le premier artefact doit etre un workspace Rust, pas une application terminal complete.
 
-Crates recommandees:
+Crates M1 recommandees:
 
 - `terminal-core`: integration parser VT, modele d'ecran, scrollback, curseur, modes, resize, snapshots.
-- `terminal-pty`: abstraction POSIX PTY et Windows ConPTY.
 - `terminal-protocol`: events structures, blocs de commande, marqueurs de prompt, hyperlinks, metadata image, format de replay.
 - `terminal-render-model`: modele cell/line/damage neutre pour GPUI ou d'autres frontends.
 - `terminal-fixtures`: tests de compatibilite, golden snapshots, replays issus de vraies sessions CLI.
 - `terminal-cli`: petit outil debug pour injecter des bytes, inspecter l'etat, rejouer des sessions et benchmarker.
 
-L'engine doit etre utilisable en headless avant l'existence du moindre renderer.
+`terminal-pty` appartient a M2: abstraction POSIX PTY et Windows ConPTY apres validation du coeur headless.
+
+L'engine doit etre utilisable en headless avant l'existence du moindre renderer ou runtime PTY.
 
 ## Non-Objectifs Pour La Premiere Version
 
@@ -207,7 +208,7 @@ Output: `docs/research-map.md`.
 
 ### M1: Prototype Core Headless
 
-Construire une crate Rust capable de:
+Construire un workspace Rust headless capable de:
 
 - ingerer des bytes via un parser VT
 - maintenir l'etat de l'ecran visible
@@ -217,7 +218,7 @@ Construire une crate Rust capable de:
 - exposer un viewport neutre pour le renderer
 - serializer un snapshot
 
-Output: `terminal-core` plus golden tests.
+Output: workspace Rust M1 avec `terminal-core`, `terminal-protocol`, `terminal-render-model`, `terminal-fixtures` et `terminal-cli`, sans crate PTY.
 
 ### M2: Harness PTY Reel
 
@@ -280,6 +281,6 @@ Avant publication publique, verifier au minimum:
 
 ## Intention Du Dossier
 
-Ce dossier commence comme brief projet et hub de recherche. Il peut devenir le vrai workspace Rust une fois le scope valide.
+Ce dossier commence comme brief projet et hub de recherche. Il devient le vrai workspace Rust a partir de M1.
 
-La prochaine etape utile est de cloner les codebases de reference sous `C:\dev\terminal-research`, puis de rediger `docs/research-map.md` avec des observations concretes sur chaque engine.
+La prochaine etape utile est de creer le workspace headless M1 decrit dans `docs/research-map.md`: cinq crates Rust, aucune crate PTY, puis les premiers tests de correction.
