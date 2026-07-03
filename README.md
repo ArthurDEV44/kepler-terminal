@@ -39,7 +39,7 @@ Crates M1 recommandees:
 - `terminal-fixtures`: tests de compatibilite, golden snapshots, replays issus de vraies sessions CLI.
 - `terminal-cli`: petit outil debug pour injecter des bytes, inspecter l'etat, rejouer des sessions et benchmarker.
 
-`terminal-pty` appartient a M2: abstraction POSIX PTY et Windows ConPTY apres validation du coeur headless.
+`terminal-pty` est la frontiere M2: abstraction POSIX PTY et Windows ConPTY apres validation du coeur headless.
 
 L'engine doit etre utilisable en headless avant l'existence du moindre renderer ou runtime PTY.
 
@@ -226,12 +226,15 @@ Executer de vraies commandes via PTY:
 
 - Linux/macOS POSIX PTY
 - Windows ConPTY
-- startup shell
+- commande directe en argv, sans shell implicite
+- mode shell explicite
+- shell par defaut: Windows choisit `COMSPEC`, puis `cmd.exe`,
+  `powershell.exe`, `pwsh.exe`; Unix choisit `$SHELL`, puis `/bin/sh`
 - resize
 - EOF et exit handling
 - backpressure safety
 
-Output: `terminal-cli run <command>` avec dumps de snapshot.
+Output: `terminal-cli run <command>` execute via PTY et dump le snapshot final.
 
 ### M3: Dogfood Paneflow
 
@@ -281,6 +284,6 @@ Avant publication publique, verifier au minimum:
 
 ## Intention Du Dossier
 
-Ce dossier commence comme brief projet et hub de recherche. Il devient le vrai workspace Rust a partir de M1.
+Ce dossier commence comme brief projet et hub de recherche. Il est maintenant le workspace Rust Hera, avec la frontiere M2 `terminal-pty` ouverte.
 
-La prochaine etape utile est de creer le workspace headless M1 decrit dans `docs/research-map.md`: cinq crates Rust, aucune crate PTY, puis les premiers tests de correction.
+La prochaine etape utile est de connecter `terminal-cli run <command>` au harness PTY reel: mode direct en argv sans shell implicite, mode shell seulement via option explicite, `terminal-core` toujours sans dependance PTY ou plateforme.

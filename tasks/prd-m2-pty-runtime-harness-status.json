@@ -1,0 +1,292 @@
+{
+  "prd": {
+    "file": "tasks/prd-m2-pty-runtime-harness.md",
+    "title": "M2 PTY Runtime Harness",
+    "created_at": "2026-07-03",
+    "status": "DONE"
+  },
+  "epics": [
+    {
+      "id": "EP-001",
+      "title": "M2 Workspace Boundary",
+      "status": "DONE",
+      "priority": "P0",
+      "stories_total": 2,
+      "stories_done": 2
+    },
+    {
+      "id": "EP-002",
+      "title": "PTY API And Backend",
+      "status": "DONE",
+      "priority": "P0",
+      "stories_total": 3,
+      "stories_done": 3
+    },
+    {
+      "id": "EP-003",
+      "title": "Session Runtime And Core Bridge",
+      "status": "DONE",
+      "priority": "P0",
+      "stories_total": 5,
+      "stories_done": 5
+    },
+    {
+      "id": "EP-004",
+      "title": "CLI Run And Snapshot Artifacts",
+      "status": "DONE",
+      "priority": "P0",
+      "stories_total": 4,
+      "stories_done": 4
+    },
+    {
+      "id": "EP-005",
+      "title": "Live PTY Fixtures And Replay",
+      "status": "DONE",
+      "priority": "P0",
+      "stories_total": 3,
+      "stories_done": 3
+    }
+  ],
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Add `terminal-pty` Crate And Dependency Direction",
+      "epic": "EP-001",
+      "status": "DONE",
+      "priority": "P0",
+      "size": "S",
+      "blocked_by": [],
+      "started_at": null,
+      "completed_at": "2026-07-03",
+      "reviewed_at": "2026-07-03"
+    },
+    {
+      "id": "US-002",
+      "title": "Update M2 Documentation Boundary",
+      "epic": "EP-001",
+      "status": "DONE",
+      "priority": "P0",
+      "size": "XS",
+      "blocked_by": [],
+      "started_at": null,
+      "completed_at": "2026-07-03",
+      "reviewed_at": "2026-07-03"
+    },
+    {
+      "id": "US-003",
+      "title": "Define PTY Domain Types And Errors",
+      "epic": "EP-002",
+      "status": "DONE",
+      "priority": "P0",
+      "size": "M",
+      "blocked_by": [
+        "US-001"
+      ],
+      "started_at": null,
+      "completed_at": "2026-07-03",
+      "reviewed_at": "2026-07-03"
+    },
+    {
+      "id": "US-004",
+      "title": "Implement Portable PTY Backend",
+      "epic": "EP-002",
+      "status": "DONE",
+      "priority": "P0",
+      "size": "M",
+      "blocked_by": [
+        "US-003"
+      ],
+      "started_at": null,
+      "completed_at": "2026-07-03",
+      "reviewed_at": "2026-07-03"
+    },
+    {
+      "id": "US-005",
+      "title": "Implement Command Builder Policy",
+      "epic": "EP-002",
+      "status": "DONE",
+      "priority": "P0",
+      "size": "M",
+      "blocked_by": [
+        "US-003",
+        "US-004"
+      ],
+      "started_at": null,
+      "completed_at": "2026-07-03",
+      "reviewed_at": "2026-07-03"
+    },
+    {
+      "id": "US-006",
+      "title": "Add PTY Session Event Loop",
+      "epic": "EP-003",
+      "status": "DONE",
+      "priority": "P0",
+      "size": "L",
+      "blocked_by": [
+        "US-004"
+      ],
+      "started_at": null,
+      "completed_at": "2026-07-03",
+      "reviewed_at": "2026-07-03"
+    },
+    {
+      "id": "US-007",
+      "title": "Bridge PTY Output Into Terminal Core",
+      "epic": "EP-003",
+      "status": "DONE",
+      "priority": "P0",
+      "size": "M",
+      "blocked_by": [
+        "US-006"
+      ],
+      "started_at": null,
+      "completed_at": "2026-07-03",
+      "reviewed_at": "2026-07-03"
+    },
+    {
+      "id": "US-008",
+      "title": "Implement Input Write API",
+      "epic": "EP-003",
+      "status": "DONE",
+      "priority": "P0",
+      "size": "M",
+      "blocked_by": [
+        "US-006"
+      ],
+      "started_at": null,
+      "completed_at": "2026-07-03",
+      "reviewed_at": "2026-07-03"
+    },
+    {
+      "id": "US-009",
+      "title": "Implement Resize Propagation",
+      "epic": "EP-003",
+      "status": "DONE",
+      "priority": "P0",
+      "size": "M",
+      "blocked_by": [
+        "US-006",
+        "US-007"
+      ],
+      "started_at": null,
+      "completed_at": "2026-07-03",
+      "reviewed_at": "2026-07-03"
+    },
+    {
+      "id": "US-010",
+      "title": "Implement Child Exit And Timeout Handling",
+      "epic": "EP-003",
+      "status": "DONE",
+      "priority": "P0",
+      "size": "M",
+      "blocked_by": [
+        "US-006",
+        "US-007"
+      ],
+      "started_at": null,
+      "completed_at": "2026-07-03",
+      "reviewed_at": "2026-07-03"
+    },
+    {
+      "id": "US-011",
+      "title": "Implement `terminal-cli run <command>`",
+      "epic": "EP-004",
+      "status": "DONE",
+      "priority": "P0",
+      "size": "M",
+      "blocked_by": [
+        "US-007",
+        "US-010"
+      ],
+      "started_at": null,
+      "completed_at": "2026-07-03",
+      "reviewed_at": "2026-07-03"
+    },
+    {
+      "id": "US-012",
+      "title": "Add Default Shell Mode",
+      "epic": "EP-004",
+      "status": "DONE",
+      "priority": "P1",
+      "size": "M",
+      "blocked_by": [
+        "US-011"
+      ],
+      "started_at": null,
+      "completed_at": "2026-07-03",
+      "reviewed_at": "2026-07-03"
+    },
+    {
+      "id": "US-013",
+      "title": "Add Scripted Input And Resize CLI Flags",
+      "epic": "EP-004",
+      "status": "DONE",
+      "priority": "P1",
+      "size": "M",
+      "blocked_by": [
+        "US-011",
+        "US-009"
+      ],
+      "started_at": null,
+      "completed_at": "2026-07-03",
+      "reviewed_at": "2026-07-03"
+    },
+    {
+      "id": "US-014",
+      "title": "Emit Run Metadata And Snapshot Files",
+      "epic": "EP-004",
+      "status": "DONE",
+      "priority": "P0",
+      "size": "M",
+      "blocked_by": [
+        "US-011"
+      ],
+      "started_at": null,
+      "completed_at": "2026-07-03",
+      "reviewed_at": "2026-07-03"
+    },
+    {
+      "id": "US-015",
+      "title": "Define PTY Recording Schema",
+      "epic": "EP-005",
+      "status": "DONE",
+      "priority": "P0",
+      "size": "M",
+      "blocked_by": [
+        "US-014"
+      ],
+      "started_at": null,
+      "completed_at": "2026-07-03",
+      "reviewed_at": "2026-07-03"
+    },
+    {
+      "id": "US-016",
+      "title": "Add Cross-Platform Live Smoke Tests",
+      "epic": "EP-005",
+      "status": "DONE",
+      "priority": "P1",
+      "size": "L",
+      "blocked_by": [
+        "US-011",
+        "US-013"
+      ],
+      "started_at": null,
+      "completed_at": "2026-07-03",
+      "reviewed_at": "2026-07-03"
+    },
+    {
+      "id": "US-017",
+      "title": "Add Recorded Replay Regression Pack",
+      "epic": "EP-005",
+      "status": "DONE",
+      "priority": "P0",
+      "size": "M",
+      "blocked_by": [
+        "US-015"
+      ],
+      "started_at": null,
+      "completed_at": "2026-07-03",
+      "reviewed_at": "2026-07-03"
+    }
+  ]
+}

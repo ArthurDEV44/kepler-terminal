@@ -1,16 +1,16 @@
 [package]
-name = "terminal-cli"
+name = "terminal-pty"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
-serde.workspace = true
-serde_json.workspace = true
+portable-pty.workspace = true
+
+[dev-dependencies]
+anyhow = "1.0"
 terminal-core.workspace = true
-terminal-fixtures.workspace = true
-terminal-pty.workspace = true
 
 [features]
 live-pty-tests = []

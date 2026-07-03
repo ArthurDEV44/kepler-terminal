@@ -27,6 +27,12 @@ pub const M1_MAX_SNAPSHOT_CELLS: usize = 1_048_576;
 pub const M1_MAX_SNAPSHOT_EVENTS: usize = 8192;
 pub const M1_MAX_SNAPSHOT_STRING_BYTES: usize = 8192;
 pub const M1_MAX_CHECKPOINTS_PER_FIXTURE: usize = 4096;
+pub const M2_PTY_RECORDING_SCHEMA: &str = "hera.pty_recording";
+pub const M2_PTY_RECORDING_VERSION: u32 = 1;
+pub const M2_MAX_PTY_RECORDING_FILE_BYTES: u64 = 8 * 1024 * 1024;
+pub const M2_MAX_PTY_RECORDING_EVENTS: usize = 8192;
+pub const M2_MAX_PTY_RECORDING_OUTPUT_BYTES: usize = 4 * 1024 * 1024;
+pub const M2_MAX_PTY_RECORDING_EVENT_BYTES: usize = 1024 * 1024;
 
 #[derive(Debug, Clone)]
 pub struct FixturePack {
@@ -909,6 +915,396 @@ pub fn deserialize_snapshot(bytes: &[u8]) -> Result<TerminalSnapshot, SnapshotCo
         })?;
     validate_snapshot(&snapshot)?;
     Ok(snapshot)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PtyRecording {
+    pub schema: String,
+    pub version: u32,
+    pub metadata: PtyRecordingMetadata,
+    pub events: Vec<PtyRecordingEvent>,
+    pub final_snapshot: TerminalSnapshot,
+}
+
+impl PtyRecording {
+    pub fn from_path(path: impl AsRef<Path>) -> Result<Self, FixtureLoadError> {
+        let path = path.as_ref();
+        let raw = read_pty_recording_file_capped(path)?;
+        Self::from_json_str(path, &raw)
+    }
+
+    pub fn from_json_str(path: impl AsRef<Path>, json: &str) -> Result<Self, FixtureLoadError> {
+        let path = path.as_ref().to_path_buf();
+        if json.len() as u64 > M2_MAX_PTY_RECORDING_FILE_BYTES {
+            return Err(invalid_schema(
+                &path,
+                "$",
+                format!(
+                    "PTY recording JSON is {} bytes, maximum is {M2_MAX_PTY_RECORDING_FILE_BYTES}",
+                    json.len()
+                ),
+            ));
+        }
+
+        let mut deserializer = serde_json::Deserializer::from_str(json);
+        let recording: Self =
+            serde_path_to_error::deserialize(&mut deserializer).map_err(|error| {
+                recording_schema_error(&path, &error.path().to_string(), &error.inner().to_string())
+            })?;
+        recording.validate(&path)?;
+        Ok(recording)
+    }
+
+    pub fn replay(&self) -> Result<PtyRecordingReplayReport, PtyRecordingReplayError> {
+        let first = self.replay_once()?;
+        if let Some(difference) = first_snapshot_difference(&self.final_snapshot, &first.snapshot) {
+            return Err(PtyRecordingReplayError::SnapshotMismatch(difference));
+        }
+
+        let second = self.replay_once()?;
+        if first.snapshot_bytes != second.snapshot_bytes {
+            return Err(PtyRecordingReplayError::NondeterministicSnapshot {
+                first_bytes: first.snapshot_bytes.len(),
+                second_bytes: second.snapshot_bytes.len(),
+            });
+        }
+
+        Ok(first)
+    }
+
+    fn replay_once(&self) -> Result<PtyRecordingReplayReport, PtyRecordingReplayError> {
+        let initial = self.metadata.initial_size;
+        let config = TerminalConfig::new(usize::from(initial.columns), usize::from(initial.rows))
+            .map_err(|error| PtyRecordingReplayError::TerminalConfig {
+            message: error.to_string(),
+        })?;
+        let mut terminal = Terminal::with_config(config);
+
+        for event in &self.events {
+            match event {
+                PtyRecordingEvent::Output { bytes, .. } => terminal.advance_bytes(bytes),
+                PtyRecordingEvent::Resize { columns, rows, .. } => terminal
+                    .resize(usize::from(*columns), usize::from(*rows))
+                    .map_err(|error| PtyRecordingReplayError::TerminalConfig {
+                        message: error.to_string(),
+                    })?,
+                PtyRecordingEvent::Input { .. }
+                | PtyRecordingEvent::Eof { .. }
+                | PtyRecordingEvent::Exit { .. } => {}
+            }
+        }
+
+        let snapshot = snapshot_terminal(&mut terminal);
+        let snapshot_bytes = serialize_snapshot(&snapshot)?;
+        Ok(PtyRecordingReplayReport {
+            snapshot,
+            snapshot_bytes,
+        })
+    }
+
+    fn validate(&self, path: &Path) -> Result<(), FixtureLoadError> {
+        if self.schema != M2_PTY_RECORDING_SCHEMA {
+            return Err(invalid_schema(
+                path,
+                "schema",
+                format!("expected {M2_PTY_RECORDING_SCHEMA}"),
+            ));
+        }
+        if self.version != M2_PTY_RECORDING_VERSION {
+            return Err(invalid_schema(
+                path,
+                "version",
+                format!("expected {M2_PTY_RECORDING_VERSION}"),
+            ));
+        }
+        if self.events.len() > M2_MAX_PTY_RECORDING_EVENTS {
+            return Err(invalid_schema(
+                path,
+                "events",
+                format!(
+                    "recording has {} events, maximum is {M2_MAX_PTY_RECORDING_EVENTS}",
+                    self.events.len()
+                ),
+            ));
+        }
+
+        validate_recording_size(path, "metadata.initial_size", self.metadata.initial_size)?;
+        validate_recording_size(
+            path,
+            "metadata.platform.initial_size",
+            self.metadata.platform.initial_size,
+        )?;
+        for (index, size) in self.metadata.resizes.iter().copied().enumerate() {
+            validate_recording_size(path, format!("metadata.resizes[{index}]"), size)?;
+        }
+        validate_exit(path, "metadata.exit", &self.metadata.exit)?;
+        validate_snapshot(&self.final_snapshot)
+            .map_err(|error| invalid_schema(path, "final_snapshot", error.to_string()))?;
+
+        let mut output_bytes = 0usize;
+        let mut saw_exit = false;
+        for (index, event) in self.events.iter().enumerate() {
+            let field = format!("events[{index}]");
+            match event {
+                PtyRecordingEvent::Output { bytes, .. } => {
+                    if bytes.is_empty() {
+                        return Err(invalid_schema(
+                            path,
+                            field,
+                            "output bytes must not be empty",
+                        ));
+                    }
+                    if bytes.len() > M2_MAX_PTY_RECORDING_EVENT_BYTES {
+                        return Err(invalid_schema(
+                            path,
+                            field,
+                            format!(
+                                "output chunk is {} bytes, maximum is {M2_MAX_PTY_RECORDING_EVENT_BYTES}",
+                                bytes.len()
+                            ),
+                        ));
+                    }
+                    output_bytes = output_bytes.checked_add(bytes.len()).ok_or_else(|| {
+                        invalid_schema(path, "events", "output byte count overflowed")
+                    })?;
+                    if output_bytes > M2_MAX_PTY_RECORDING_OUTPUT_BYTES {
+                        return Err(invalid_schema(
+                            path,
+                            "events",
+                            format!(
+                                "recording output is {output_bytes} bytes, maximum is {M2_MAX_PTY_RECORDING_OUTPUT_BYTES}"
+                            ),
+                        ));
+                    }
+                }
+                PtyRecordingEvent::Input { bytes, .. } => {
+                    if bytes.len() > M2_MAX_PTY_RECORDING_EVENT_BYTES {
+                        return Err(invalid_schema(
+                            path,
+                            field,
+                            format!(
+                                "input chunk is {} bytes, maximum is {M2_MAX_PTY_RECORDING_EVENT_BYTES}",
+                                bytes.len()
+                            ),
+                        ));
+                    }
+                }
+                PtyRecordingEvent::Resize { columns, rows, .. } => {
+                    validate_recording_size(path, field, PtyRecordingSize::new(*columns, *rows))?;
+                }
+                PtyRecordingEvent::Eof { .. } => {}
+                PtyRecordingEvent::Exit { exit, .. } => {
+                    validate_exit(path, format!("{field}.exit"), exit)?;
+                    saw_exit = true;
+                }
+            }
+        }
+
+        if !saw_exit {
+            return Err(invalid_schema(
+                path,
+                "events",
+                "recording must include an exit event",
+            ));
+        }
+        if self.metadata.recording.output_bytes != output_bytes {
+            return Err(invalid_schema(
+                path,
+                "metadata.recording.output_bytes",
+                format!("expected recorded output byte count {output_bytes}"),
+            ));
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PtyRecordingMetadata {
+    pub command: PtyRecordingCommandMetadata,
+    pub platform: PtyRecordingPlatformMetadata,
+    pub exit: PtyRecordingExitMetadata,
+    pub runtime: PtyRecordingRuntimeMetadata,
+    pub initial_size: PtyRecordingSize,
+    pub input: PtyRecordingInputMetadata,
+    pub resizes: Vec<PtyRecordingSize>,
+    pub recording: PtyRecordingStorageMetadata,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PtyRecordingCommandMetadata {
+    pub mode: PtyRecordingCommandMode,
+    pub program: String,
+    pub args: Vec<String>,
+    pub shell_command: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PtyRecordingCommandMode {
+    Direct,
+    Shell,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PtyRecordingPlatformMetadata {
+    pub pty_backend: String,
+    pub process_id: Option<u32>,
+    pub initial_size: PtyRecordingSize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PtyRecordingExitMetadata {
+    pub code: u32,
+    pub signal: Option<String>,
+    pub success: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PtyRecordingRuntimeMetadata {
+    pub output_bytes: usize,
+    pub output_chunks: usize,
+    pub saw_eof: bool,
+    pub drain_timed_out: bool,
+    pub timeout_ms: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PtyRecordingSize {
+    pub columns: u16,
+    pub rows: u16,
+}
+
+impl PtyRecordingSize {
+    #[must_use]
+    pub const fn new(columns: u16, rows: u16) -> Self {
+        Self { columns, rows }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PtyRecordingInputMetadata {
+    pub path: Option<String>,
+    pub bytes: usize,
+    pub max_bytes: usize,
+    pub stdin_closed_after_input: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PtyRecordingStorageMetadata {
+    pub enabled: bool,
+    pub output_bytes: usize,
+    pub output_truncated: bool,
+    pub max_output_bytes: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum PtyRecordingEvent {
+    Output {
+        elapsed_ms: u64,
+        bytes: Vec<u8>,
+    },
+    Input {
+        elapsed_ms: u64,
+        bytes: Vec<u8>,
+        source: Option<String>,
+    },
+    Resize {
+        elapsed_ms: u64,
+        columns: u16,
+        rows: u16,
+    },
+    Eof {
+        elapsed_ms: u64,
+    },
+    Exit {
+        elapsed_ms: u64,
+        exit: PtyRecordingExitMetadata,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PtyRecordingReplayReport {
+    snapshot: TerminalSnapshot,
+    snapshot_bytes: Vec<u8>,
+}
+
+impl PtyRecordingReplayReport {
+    #[must_use]
+    pub const fn snapshot(&self) -> &TerminalSnapshot {
+        &self.snapshot
+    }
+
+    #[must_use]
+    pub fn snapshot_bytes(&self) -> &[u8] {
+        &self.snapshot_bytes
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PtyRecordingReplayError {
+    TerminalConfig {
+        message: String,
+    },
+    SnapshotMismatch(SnapshotDifference),
+    NondeterministicSnapshot {
+        first_bytes: usize,
+        second_bytes: usize,
+    },
+    SnapshotCodec(SnapshotCodecError),
+}
+
+impl fmt::Display for PtyRecordingReplayError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::TerminalConfig { message } => {
+                write!(
+                    formatter,
+                    "PTY recording replay has invalid terminal config: {message}"
+                )
+            }
+            Self::SnapshotMismatch(difference) => {
+                write!(formatter, "PTY recording replay mismatch: {difference}")
+            }
+            Self::NondeterministicSnapshot {
+                first_bytes,
+                second_bytes,
+            } => write!(
+                formatter,
+                "PTY recording replay was nondeterministic: first {first_bytes} bytes, second {second_bytes} bytes"
+            ),
+            Self::SnapshotCodec(error) => write!(formatter, "{error}"),
+        }
+    }
+}
+
+impl std::error::Error for PtyRecordingReplayError {}
+
+impl From<SnapshotCodecError> for PtyRecordingReplayError {
+    fn from(value: SnapshotCodecError) -> Self {
+        Self::SnapshotCodec(value)
+    }
+}
+
+pub fn serialize_pty_recording_pretty(recording: &PtyRecording) -> Result<String, String> {
+    let text = serde_json::to_string_pretty(recording).map_err(|error| error.to_string())?;
+    if text.len() as u64 > M2_MAX_PTY_RECORDING_FILE_BYTES {
+        return Err(format!(
+            "PTY recording is {} bytes, maximum is {M2_MAX_PTY_RECORDING_FILE_BYTES}",
+            text.len()
+        ));
+    }
+    Ok(text)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -2145,6 +2541,111 @@ fn read_fixture_file_capped(path: &Path) -> Result<String, FixtureLoadError> {
     Ok(raw)
 }
 
+fn read_pty_recording_file_capped(path: &Path) -> Result<String, FixtureLoadError> {
+    let metadata = fs::metadata(path).map_err(|error| FixtureLoadError::Io {
+        path: path.to_path_buf(),
+        message: error.to_string(),
+    })?;
+    if !metadata.is_file() {
+        return Err(invalid_schema(
+            path,
+            "$",
+            "PTY recording path must be a regular file",
+        ));
+    }
+    if metadata.len() > M2_MAX_PTY_RECORDING_FILE_BYTES {
+        return Err(invalid_schema(
+            path,
+            "$",
+            format!(
+                "PTY recording file is {} bytes, maximum is {M2_MAX_PTY_RECORDING_FILE_BYTES}",
+                metadata.len()
+            ),
+        ));
+    }
+
+    let file = fs::File::open(path).map_err(|error| FixtureLoadError::Io {
+        path: path.to_path_buf(),
+        message: error.to_string(),
+    })?;
+    let mut reader = file.take(M2_MAX_PTY_RECORDING_FILE_BYTES + 1);
+    let mut raw = String::new();
+    reader
+        .read_to_string(&mut raw)
+        .map_err(|error| FixtureLoadError::Io {
+            path: path.to_path_buf(),
+            message: error.to_string(),
+        })?;
+
+    if raw.len() as u64 > M2_MAX_PTY_RECORDING_FILE_BYTES {
+        return Err(invalid_schema(
+            path,
+            "$",
+            format!(
+                "PTY recording file exceeded maximum of {M2_MAX_PTY_RECORDING_FILE_BYTES} bytes while reading"
+            ),
+        ));
+    }
+
+    Ok(raw)
+}
+
+fn validate_recording_size(
+    path: &Path,
+    field: impl Into<String>,
+    size: PtyRecordingSize,
+) -> Result<(), FixtureLoadError> {
+    Dimensions::new(usize::from(size.columns), usize::from(size.rows))
+        .map(|_| ())
+        .map_err(|error| invalid_schema(path, field, error.to_string()))
+}
+
+fn validate_exit(
+    path: &Path,
+    field: impl Into<String>,
+    exit: &PtyRecordingExitMetadata,
+) -> Result<(), FixtureLoadError> {
+    let expected_success = exit.code == 0 && exit.signal.is_none();
+    if exit.success != expected_success {
+        return Err(invalid_schema(
+            path,
+            field,
+            format!(
+                "exit success must be {expected_success} for code={} signal={:?}",
+                exit.code, exit.signal
+            ),
+        ));
+    }
+
+    Ok(())
+}
+
+fn recording_schema_error(path: &Path, serde_path: &str, message: &str) -> FixtureLoadError {
+    let field = missing_field(message)
+        .map(|missing| {
+            if serde_path == "." {
+                missing
+            } else {
+                format!("{serde_path}.{missing}")
+            }
+        })
+        .unwrap_or_else(|| {
+            if serde_path == "." {
+                "$".to_owned()
+            } else {
+                serde_path.to_owned()
+            }
+        });
+
+    invalid_schema(path, field, message)
+}
+
+fn missing_field(message: &str) -> Option<String> {
+    let rest = message.strip_prefix("missing field `")?;
+    let (field, _) = rest.split_once('`')?;
+    Some(field.to_owned())
+}
+
 fn required<T>(
     path: &Path,
     prefix: &str,
@@ -2171,6 +2672,7 @@ mod tests {
     use super::{
         FixtureAssertionFailure, FixtureLoadError, FixturePack, FixtureRunError, FixtureRunner,
         M1_MAX_FIXTURE_INPUT_BYTES, M1_MAX_FIXTURE_VIEWPORT_CELLS, M1_MAX_SNAPSHOT_BYTES,
+        M2_MAX_PTY_RECORDING_FILE_BYTES, PtyRecording, PtyRecordingEvent, PtyRecordingReplayError,
         SnapshotCodecError, SnapshotCursor, SnapshotScreen, deserialize_snapshot,
         first_snapshot_difference, serialize_snapshot,
     };
@@ -2179,6 +2681,12 @@ mod tests {
 
     fn fixture_pack_path() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("fixtures/m1-golden.json")
+    }
+
+    fn pty_recording_path(name: &str) -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("fixtures/pty")
+            .join(name)
     }
 
     #[test]
@@ -2424,5 +2932,115 @@ mod tests {
         let error = deserialize_snapshot(&bytes).expect_err("oversized snapshot must fail");
 
         assert!(matches!(error, SnapshotCodecError::Deserialize { .. }));
+    }
+
+    #[test]
+    fn pty_recording_pack_replays_checked_in_recordings() {
+        for recording_name in [
+            "plain-output.json",
+            "non-zero-exit.json",
+            "resize-aware.json",
+        ] {
+            let recording = PtyRecording::from_path(pty_recording_path(recording_name))
+                .expect("PTY recording fixture should load");
+            let report = recording.replay().expect("PTY recording should replay");
+
+            assert!(!report.snapshot_bytes().is_empty());
+            assert_eq!(
+                report.snapshot().columns(),
+                recording.final_snapshot.columns
+            );
+        }
+    }
+
+    #[test]
+    fn pty_recording_schema_reports_missing_field_path() {
+        let json = r#"{
+          "schema": "hera.pty_recording",
+          "version": 1,
+          "metadata": {
+            "command": { "mode": "direct", "program": "fixture", "args": [], "shell_command": null },
+            "platform": { "pty_backend": "recorded", "process_id": null, "initial_size": { "columns": 4, "rows": 1 } },
+            "exit": { "code": 0, "signal": null, "success": true },
+            "runtime": { "output_bytes": 2, "output_chunks": 1, "saw_eof": true, "drain_timed_out": false, "timeout_ms": 5000 },
+            "initial_size": { "columns": 4, "rows": 1 },
+            "input": { "path": null, "bytes": 0, "max_bytes": 65536, "stdin_closed_after_input": false },
+            "resizes": [],
+            "recording": { "enabled": true, "output_bytes": 2, "output_truncated": false, "max_output_bytes": 4194304 }
+          },
+          "events": [
+            { "kind": "output", "elapsed_ms": 1, "bytes": [111, 107] },
+            { "kind": "exit", "elapsed_ms": 2, "exit": { "code": 0, "signal": null, "success": true } }
+          ]
+        }"#;
+
+        let error = PtyRecording::from_json_str("inline-recording.json", json)
+            .expect_err("missing final snapshot must fail");
+
+        assert!(matches!(
+            error,
+            FixtureLoadError::InvalidSchema { field, .. } if field == "final_snapshot"
+        ));
+    }
+
+    #[test]
+    fn pty_recording_rejects_oversized_file_before_schema_parse() {
+        let json = " ".repeat(M2_MAX_PTY_RECORDING_FILE_BYTES as usize + 1);
+        let error = PtyRecording::from_json_str("too-large-recording.json", &json)
+            .expect_err("oversized recording must fail before deserialization");
+
+        assert!(matches!(
+            error,
+            FixtureLoadError::InvalidSchema { field, .. } if field == "$"
+        ));
+    }
+
+    #[test]
+    fn pty_recording_timestamps_do_not_affect_replayed_snapshot() {
+        let recording = PtyRecording::from_path(pty_recording_path("plain-output.json"))
+            .expect("recording should load");
+        let baseline = recording
+            .replay()
+            .expect("baseline recording should replay")
+            .snapshot_bytes()
+            .to_vec();
+        let mut changed = recording.clone();
+
+        for event in &mut changed.events {
+            match event {
+                PtyRecordingEvent::Output { elapsed_ms, .. }
+                | PtyRecordingEvent::Input { elapsed_ms, .. }
+                | PtyRecordingEvent::Resize { elapsed_ms, .. }
+                | PtyRecordingEvent::Eof { elapsed_ms }
+                | PtyRecordingEvent::Exit { elapsed_ms, .. } => {
+                    *elapsed_ms = elapsed_ms.saturating_add(10_000);
+                }
+            }
+        }
+
+        let changed = changed
+            .replay()
+            .expect("timestamp-only change should replay")
+            .snapshot_bytes()
+            .to_vec();
+
+        assert_eq!(baseline, changed);
+    }
+
+    #[test]
+    fn pty_recording_wrong_snapshot_identifies_first_differing_field() {
+        let mut recording = PtyRecording::from_path(pty_recording_path("plain-output.json"))
+            .expect("recording should load");
+        recording.final_snapshot.viewport_rows[0].cells[1].ch = 'x';
+
+        let error = recording
+            .replay()
+            .expect_err("wrong final snapshot should fail");
+
+        assert!(matches!(
+            error,
+            PtyRecordingReplayError::SnapshotMismatch(difference)
+                if difference.field() == "$.viewport_rows[0].cells[1].ch"
+        ));
     }
 }

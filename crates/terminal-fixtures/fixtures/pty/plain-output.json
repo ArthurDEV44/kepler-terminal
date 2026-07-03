@@ -1,0 +1,69 @@
+{
+  "schema": "hera.pty_recording",
+  "version": 1,
+  "metadata": {
+    "command": {
+      "mode": "direct",
+      "program": "hera-recording-fixture",
+      "args": ["plain-output"],
+      "shell_command": null
+    },
+    "platform": {
+      "pty_backend": "recorded",
+      "process_id": null,
+      "initial_size": { "columns": 4, "rows": 1 }
+    },
+    "exit": { "code": 0, "signal": null, "success": true },
+    "runtime": {
+      "output_bytes": 2,
+      "output_chunks": 1,
+      "saw_eof": true,
+      "drain_timed_out": false,
+      "timeout_ms": 5000
+    },
+    "initial_size": { "columns": 4, "rows": 1 },
+    "input": {
+      "path": null,
+      "bytes": 0,
+      "max_bytes": 65536,
+      "stdin_closed_after_input": false
+    },
+    "resizes": [],
+    "recording": {
+      "enabled": true,
+      "output_bytes": 2,
+      "output_truncated": false,
+      "max_output_bytes": 4194304
+    }
+  },
+  "events": [
+    { "kind": "output", "elapsed_ms": 1, "bytes": [111, 107] },
+    { "kind": "eof", "elapsed_ms": 2 },
+    {
+      "kind": "exit",
+      "elapsed_ms": 3,
+      "exit": { "code": 0, "signal": null, "success": true }
+    }
+  ],
+  "final_snapshot": {
+    "columns": 4,
+    "rows": 1,
+    "active_screen": "primary",
+    "cursor": { "row": 0, "column": 2, "visible": true },
+    "viewport_rows": [
+      {
+        "handle": { "id": 1, "generation": 0 },
+        "cells": [
+          { "ch": "o", "width": 1, "style": { "foreground": null, "background": null, "bold": false, "italic": false, "underline": false, "inverse": false }, "image": null },
+          { "ch": "k", "width": 1, "style": { "foreground": null, "background": null, "bold": false, "italic": false, "underline": false, "inverse": false }, "image": null },
+          { "ch": " ", "width": 1, "style": { "foreground": null, "background": null, "bold": false, "italic": false, "underline": false, "inverse": false }, "image": null },
+          { "ch": " ", "width": 1, "style": { "foreground": null, "background": null, "bold": false, "italic": false, "underline": false, "inverse": false }, "image": null }
+        ],
+        "wrapped": false
+      }
+    ],
+    "scrollback_rows": [],
+    "damage": [],
+    "events": []
+  }
+}

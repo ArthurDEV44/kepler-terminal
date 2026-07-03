@@ -1,7 +1,7 @@
 # Research Map
 
-Status: M0 initial map
-Date: 2026-07-01
+Status: M2 boundary update
+Date: 2026-07-03
 Scope: architecture research for `Hera`, not implementation.
 
 ## Executive Synthesis
@@ -839,7 +839,7 @@ Owns debugging and dogfood commands.
 - dump state
 - replay session
 - compare snapshots
-- run a PTY command
+- run a direct PTY command as argv, with shell execution only behind explicit shell mode
 - benchmark parse, render snapshot and memory
 
 ## Language And Platform Strategy
@@ -1154,14 +1154,24 @@ These are the public specs/docs worth keeping near the repo:
 
 ## Next Implementation Step
 
-Create the Rust workspace with only the headless crates needed for M1:
+The M2 runtime boundary is open. The next implementation step is to wire
+`terminal-cli run <command>` through the PTY harness without weakening the
+headless core:
 
 1. `terminal-core`
 2. `terminal-protocol`
 3. `terminal-render-model`
 4. `terminal-fixtures`
 5. `terminal-cli`
+6. `terminal-pty`
 
-Hold `terminal-pty` until the core can parse bytes, maintain visible state,
-switch alternate screen, resize predictably and serialize snapshots. That keeps
-the first milestone honest: terminal correctness before process orchestration.
+`terminal-pty` owns `portable-pty`, process IO, resize, lifecycle and platform
+quirks. `terminal-core` remains PTY-free and continues to own parser semantics,
+visible state, alternate screen, resize, snapshots and byte ingestion. Paneflow
+dogfood stays M3, after `terminal-cli run <command>` can execute through PTY and
+dump deterministic snapshots. Direct command mode must pass program and args as
+argv, never by joining a shell string. Shell interpretation belongs only behind
+explicit shell mode, and OSC or other terminal payloads must never execute host
+commands. Default shell selection is deterministic: Windows tries `COMSPEC`,
+then `cmd.exe`, `powershell.exe` and `pwsh.exe`; Unix tries `$SHELL`, then
+`/bin/sh`.

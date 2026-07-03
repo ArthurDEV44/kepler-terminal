@@ -189,15 +189,36 @@ mod tests {
     };
 
     const MANIFEST: &str = include_str!("../Cargo.toml");
+    const WORKSPACE_MANIFEST: &str = include_str!("../../../Cargo.toml");
+    const TERMINAL_PROTOCOL_MANIFEST: &str = include_str!("../../terminal-protocol/Cargo.toml");
+    const TERMINAL_RENDER_MODEL_MANIFEST: &str =
+        include_str!("../../terminal-render-model/Cargo.toml");
+    const TERMINAL_FIXTURES_MANIFEST: &str = include_str!("../../terminal-fixtures/Cargo.toml");
+    const TERMINAL_CLI_MANIFEST: &str = include_str!("../../terminal-cli/Cargo.toml");
+    const TERMINAL_PTY_MANIFEST: &str = include_str!("../../terminal-pty/Cargo.toml");
     const PUBLIC_CORE_SOURCE: &str = include_str!("lib.rs");
     const STATE_SOURCE: &str = include_str!("state.rs");
     const FORBIDDEN_BOUNDARY_DEPENDENCIES: &[&str] = &[
         "terminal-pty",
         "portable-pty",
         "gpui",
+        "libc",
+        "nix",
+        "paneflow",
+        "rustix",
+        "tauri",
+        "electron",
+        "winapi",
         "winit",
         "windows",
         "windows-sys",
+    ];
+    const NON_PTY_MEMBER_MANIFESTS: &[(&str, &str, &[&str])] = &[
+        ("terminal-core", MANIFEST, &[]),
+        ("terminal-protocol", TERMINAL_PROTOCOL_MANIFEST, &[]),
+        ("terminal-render-model", TERMINAL_RENDER_MODEL_MANIFEST, &[]),
+        ("terminal-fixtures", TERMINAL_FIXTURES_MANIFEST, &[]),
+        ("terminal-cli", TERMINAL_CLI_MANIFEST, &["terminal-pty"]),
     ];
 
     fn terminal(columns: usize, rows: usize) -> Terminal {
@@ -212,13 +233,56 @@ mod tests {
         row.cells().iter().map(RenderCell::ch).collect()
     }
 
+    fn manifest_declares_dependency(manifest: &str, dependency: &str) -> bool {
+        manifest.lines().any(|raw_line| {
+            let line = raw_line
+                .split_once('#')
+                .map_or(raw_line, |(before_comment, _)| before_comment)
+                .trim_start();
+            let quoted_dependency = format!("\"{dependency}\"");
+            let package_dependency = format!("package = \"{dependency}\"");
+
+            line.contains(&package_dependency)
+                || line
+                    .strip_prefix(dependency)
+                    .and_then(|rest| rest.as_bytes().first().copied())
+                    .is_some_and(|byte| matches!(byte, b' ' | b'=' | b'.' | b'-'))
+                || line
+                    .strip_prefix(&quoted_dependency)
+                    .and_then(|rest| rest.as_bytes().first().copied())
+                    .is_some_and(|byte| matches!(byte, b' ' | b'=' | b'.'))
+        })
+    }
+
     #[test]
     fn manifest_has_no_platform_pty_or_renderer_dependencies() {
         for dependency in FORBIDDEN_BOUNDARY_DEPENDENCIES {
             assert!(
-                !MANIFEST.contains(dependency),
+                !manifest_declares_dependency(MANIFEST, dependency),
                 "terminal-core must keep the M1 headless boundary; forbidden dependency found: {dependency}"
             );
+        }
+    }
+
+    #[test]
+    fn workspace_keeps_platform_pty_dependencies_behind_terminal_pty() {
+        assert!(WORKSPACE_MANIFEST.contains("\"crates/terminal-pty\""));
+        assert!(manifest_declares_dependency(
+            TERMINAL_PTY_MANIFEST,
+            "portable-pty"
+        ));
+
+        for (crate_name, manifest, allowed_dependencies) in NON_PTY_MEMBER_MANIFESTS {
+            for dependency in FORBIDDEN_BOUNDARY_DEPENDENCIES {
+                if allowed_dependencies.contains(dependency) {
+                    continue;
+                }
+
+                assert!(
+                    !manifest_declares_dependency(manifest, dependency),
+                    "{crate_name} must keep PTY, platform and product runtime dependencies behind terminal-pty; forbidden dependency found: {dependency}"
+                );
+            }
         }
     }
 

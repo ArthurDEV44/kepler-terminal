@@ -5,6 +5,7 @@ members = [
     "crates/terminal-render-model",
     "crates/terminal-fixtures",
     "crates/terminal-cli",
+    "crates/terminal-pty",
 ]
 resolver = "3"
 
@@ -22,6 +23,8 @@ terminal-core = { path = "crates/terminal-core" }
 terminal-render-model = { path = "crates/terminal-render-model" }
 terminal-protocol = { path = "crates/terminal-protocol" }
 terminal-fixtures = { path = "crates/terminal-fixtures" }
+terminal-pty = { path = "crates/terminal-pty" }
+portable-pty = "0.9.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_path_to_error = "0.1"
