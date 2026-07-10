@@ -1,0 +1,36 @@
+{
+  "schema": "hera.m5_paneflow_shadow_dogfood_live_summary",
+  "version": 1,
+  "generated_at": "2026-07-10T09:09:08Z",
+  "status": "targeted_pass",
+  "source_command": "manual: isolated live Paneflow shadow dogfood with two scripted panes for 2700 seconds",
+  "run": {
+    "mode": "shadow",
+    "duration_seconds_observed": 2700,
+    "completed_45_minute_target": true,
+    "initial_workspace_count": 1,
+    "dogfood_workspace_panes": 2,
+    "workloads": [
+      "slow_output",
+      "burst_output"
+    ]
+  },
+  "retention": {
+    "private_artifacts_retained_outside_hera": true,
+    "public_summary_is_scrubbed": true,
+    "user_cache_restored": true
+  },
+  "mismatch_summary": {
+    "total_reports": 0,
+    "p0": 0,
+    "p1": 0,
+    "p2": 0,
+    "fields": [],
+    "panes": []
+  },
+  "notes": [
+    "The live run completed its full target and produced no mismatch report JSON files.",
+    "This public summary omits terminal text, local paths, user names, host names, tokens and raw artifact paths.",
+    "The isolated debug cache prevented prior Paneflow workspaces from entering the scenario."
+  ]
+}

@@ -1,14 +1,14 @@
 # M5 Compatibility And Release Hardening Report
 
-Status: EP-006 final report complete, M5 host replacement and public pre-release packaging blocked
-Date: 2026-07-04
+Status: M5 complete, host replacement and public pre-release packaging blocked
+Date: 2026-07-10
 
 M5 converted M4's partial public proof into a broader compatibility, replay,
 platform, package, API and security evidence package. The milestone should not
 move directly into Paneflow host replacement or crates.io pre-release packaging.
 The evidence now says the next chantier is another focused compatibility and
-release hardening milestone, with live dogfood, Linux/macOS runners, package
-staging, semver tooling and security policy as the blocking work.
+release hardening milestone, with Linux/macOS runners, package staging, semver
+tooling and security policy as the blocking work.
 
 ## Final Verdict
 
@@ -17,7 +17,7 @@ staging, semver tooling and security policy as the blocking work.
 | Baseline and policy | pass | `evidence/m5/m5-baseline.json` references M4 `DONE` status and `evidence/m5/m5-go-no-go-thresholds.json` defines the three M6 outcomes. |
 | Compatibility | pass with platform caveat | `evidence/m5/compatibility-matrix.json` has 19 rows: 18 pass rows, 18 measured-on-Windows rows and one out-of-scope Sixel row. |
 | Replay | pass | `evidence/m5/m5-replay-verification.json` verifies Codex, Claude Code, rapid-output and 100k-line fixtures twice with deterministic snapshot hashes. |
-| Paneflow shadow dogfood | failed | `evidence/m5/paneflow-shadow-dogfood.json` records the 2026-07-07 isolated live GPUI shadow rerun: 28 P0 mismatch reports across style buckets and viewport line alignment. |
+| Paneflow shadow dogfood | targeted pass | `evidence/m5/paneflow-shadow-dogfood.json` records the 2026-07-10 isolated live GPUI run: two scripted panes completed 45 minutes with zero mismatch report files. |
 | Platform runtime | partial | `evidence/m5/platform-runtime-evidence.json` records Windows pass for the five required commands and blocked Linux/macOS rows with exact rerun commands. |
 | Package readiness | blocked | `evidence/m5/m5-package-readiness.json` records metadata/docs.rs pass for all six public crates, but dependent dry-runs fail until upstream Hera crates exist in the registry or a staging strategy is accepted. |
 | API hardening | partial | `evidence/m5/m5-api-audit.json` records no P0 boundary leak, but `cargo-semver-checks` is unavailable and public milestone-prefixed names remain an M6 release blocker. |
@@ -27,16 +27,16 @@ staging, semver tooling and security policy as the blocking work.
 
 M6 should be another compatibility and release hardening milestone.
 
-Host replacement experiment is blocked because the 2026-07-07 live Paneflow M5
-shadow rerun produced P0 mismatch reports and keeps `replacement_blocked = true`.
+The Paneflow shadow dogfood blocker is closed: the 2026-07-10 isolated live run
+completed 45 minutes with zero mismatch reports. Host replacement remains
+blocked by the unmeasured Linux/macOS rows and the remaining release, API and
+security evidence gaps, so `replacement_blocked = true` remains conservative.
 Public pre-release packaging is blocked because package dry-runs for dependent
 crates fail, semver tooling is unavailable and the security baseline has one
 release-blocking finding.
 
 The viable M6 scope is therefore narrow and evidence-driven:
 
-- Fix the live Paneflow shadow mismatches and replace the failed summary with a
-  zero-P0 scrubbed run.
 - Add Linux and macOS platform evidence through local runners or CI.
 - Add explicit cargo-deny policy, rerun cargo-audit or record CI evidence, and
   run OpenSSF Scorecard through CLI or GitHub Action.
@@ -101,14 +101,12 @@ with:
 cargo run -p terminal-cli -- validate-m5-dogfood evidence/m5/paneflow-shadow-dogfood.json
 ```
 
-It is still `failed`: the 2026-07-07 isolated live GPUI shadow rerun restored
-five existing terminal sessions, created a two-pane scripted dogfood workspace
-and produced 28 P0 mismatch reports before the 45-minute target could be
-meaningful. The scrubbed breakdown is 17 `$.style_buckets` reports, 2
-`$.viewport_lines[0]` reports and 9 viewport row alignment reports across
-`$.viewport_lines[11]` through `$.viewport_lines[19]`. The public scrubbed summary is
-`evidence/m5/dogfood/live-gpui-summary-2026-07-07.json`. Raw local terminal
-bytes and private mismatch JSON stay outside this repo.
+It is now `targeted_pass`: the 2026-07-10 isolated live GPUI shadow run started
+from one default workspace, created a two-pane slow/burst dogfood workspace and
+completed the full 45-minute target with zero `*-report.json` files. The public
+scrubbed summary is
+`evidence/m5/dogfood/live-gpui-summary-2026-07-10.json`. Raw local terminal
+bytes, recordings and runtime state stay outside this repo.
 
 ## Platform Evidence
 

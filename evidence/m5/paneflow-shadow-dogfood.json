@@ -1,169 +1,27 @@
 {
   "schema": "hera.m5_paneflow_shadow_dogfood",
   "version": 1,
-  "generated_at": "2026-07-07T19:26:30Z",
-  "source_command": "manual: PANEFLOW_HERA_TERMINAL_ROOT=<hera-repo> PANEFLOW_HERA_DOGFOOD=shadow PANEFLOW_HERA_DOGFOOD_RETENTION=raw_local PANEFLOW_IPC_SCRIPTING=1 PANEFLOW_SOCKET_PATH=<isolated-pipe> target/debug/paneflow.exe; workspace.up two scripted panes; summarize live mismatch reports",
-  "status": "failed",
+  "generated_at": "2026-07-10T09:09:08Z",
+  "source_command": "manual: isolate the Paneflow debug cache; PANEFLOW_HERA_DOGFOOD=shadow PANEFLOW_HERA_DOGFOOD_RETENTION=raw_local PANEFLOW_IPC_SCRIPTING=1 PANEFLOW_SOCKET_PATH=<isolated-pipe> target/debug/paneflow.exe; workspace.up two scripted panes for 2700 seconds; verify zero *-report.json",
+  "status": "targeted_pass",
   "scenario": {
     "mode": "shadow",
-    "duration_minutes": 1,
-    "pane_count": 7,
+    "duration_minutes": 45,
+    "pane_count": 2,
     "command_classes": [
-      "restored_paneflow_terminals",
       "shell_startup",
-      "session_restore",
       "scripted_long_output",
-      "scripted_burst_output"
+      "scripted_burst_output",
+      "bounded_scrollback_pressure"
     ],
     "artifact_directory": "evidence/m5/dogfood"
   },
   "mismatch_summary": {
-    "total": 28,
-    "p0": 28,
+    "total": 0,
+    "p0": 0,
     "p1": 0,
     "p2": 0,
-    "sanitized_mismatches": [
-      {
-        "severity": "p0",
-        "summary": "Live GPUI 2-pane run reported bootstrap viewport row 0 ordering drift at 120x40 before the 45-minute target could continue.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI 2-pane run reported bootstrap viewport row 0 ordering drift at 120x40 before the 45-minute target could continue.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI burst-output pane reported style bucket drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI burst-output pane reported style bucket drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI burst-output pane reported style bucket drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI burst-output pane reported style bucket drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI burst-output pane reported style bucket drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI burst-output pane reported style bucket drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI burst-output pane reported style bucket drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI burst-output pane reported style bucket drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI burst-output pane reported style bucket drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI burst-output pane reported style bucket drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI burst-output pane reported style bucket drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI burst-output pane reported style bucket drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI burst-output pane reported style bucket drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI burst-output pane reported style bucket drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI burst-output pane reported style bucket drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI burst-output pane reported style bucket drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI burst-output pane reported style bucket drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI slow-output pane reported viewport row 11 alignment drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI slow-output pane reported viewport row 12 alignment drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI slow-output pane reported viewport row 13 alignment drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI slow-output pane reported viewport row 14 alignment drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI slow-output pane reported viewport row 15 alignment drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI slow-output pane reported viewport row 16 alignment drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI slow-output pane reported viewport row 17 alignment drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI slow-output pane reported viewport row 18 alignment drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      },
-      {
-        "severity": "p0",
-        "summary": "Live GPUI slow-output pane reported viewport row 19 alignment drift during scripted shadow output at 120x40.",
-        "reproduction_pointer": "evidence/m5/dogfood/live-gpui-summary-2026-07-07.json"
-      }
-    ]
+    "sanitized_mismatches": []
   },
   "retention": {
     "raw_local_retained_outside_repo": true,
@@ -172,8 +30,9 @@
   },
   "replacement_blocked": true,
   "notes": [
-    "Failed state: the live GPUI shadow run produced P0 mismatch reports before the 45-minute target could be meaningful.",
-    "The rerun used an isolated local artifact directory and named pipe; raw terminal bytes and private mismatch JSON stayed outside Hera.",
-    "US-010 remains blocked until live dogfood produces zero P0 mismatches."
+    "Targeted pass: the isolated live GPUI shadow run completed the full 45-minute target with two scripted panes and zero mismatch report files.",
+    "The run started from an empty debug cache with one default workspace; the prior user cache was restored after the run.",
+    "Raw local recordings and runtime state remain outside Hera; this file and the linked live summary contain only scrubbed aggregate evidence.",
+    "US-010 dogfood is complete, while host replacement remains blocked by separate platform, package, API and security evidence gaps."
   ]
 }
